@@ -349,7 +349,7 @@ class handler(BaseHTTPRequestHandler):
             return self.send_json(200, set_order_status(int(match.group(1)), status))
         raise ApiError(404, "No encontrado.")
 
-    def handle_request(self):
+    def serve_api(self):
         try:
             self.route()
         except ApiError as error:
@@ -359,10 +359,10 @@ class handler(BaseHTTPRequestHandler):
             self.send_json(500, {"error": "Ocurrió un problema. Inténtalo de nuevo."})
 
     def do_GET(self):
-        self.handle_request()
+        self.serve_api()
 
     def do_POST(self):
-        self.handle_request()
+        self.serve_api()
 
     def do_PATCH(self):
-        self.handle_request()
+        self.serve_api()
