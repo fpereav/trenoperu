@@ -2,7 +2,6 @@
   "buildCommand": "python3 -m pip install -q -r requirements.txt && python3 scripts/migrate.py",
   "outputDirectory": "public",
   "cleanUrls": true,
-  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }],
   "headers": [
     {
       "source": "/(.*)",
