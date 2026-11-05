@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>TRENO — Compras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#ffffff}
+[hidden]{display:none !important}
+th,td{padding:12px;text-align:left;vertical-align:top;border-bottom:1px solid #E6E6E6}
+th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#555555;white-space:nowrap}
+td ul{margin:0;padding:0;list-style:none}
+</style>
+</head>
+<body>
+<div style="font-family: Inter, system-ui, sans-serif; color: #111111; min-height: 100vh">
+  <header style="border-bottom: 1px solid #E6E6E6">
+    <div style="max-width: 1440px; margin: 0 auto; padding: 0 32px; display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 72px">
+      <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; letter-spacing: 0.06em">TREN<span style="color: #FF4670">O</span> <span style="font-size: 18px; letter-spacing: 0.02em">ADMIN</span></div>
+      <button id="logout" type="button" hidden style="min-height: 44px; border: 0; background: transparent; font: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; color: #111111">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main style="max-width: 1440px; margin: 0 auto; padding: 24px 32px 64px">
+    <form id="login" hidden style="max-width: 360px; margin: 48px auto; display: flex; flex-direction: column; gap: 12px">
+      <h1 style="margin: 0 0 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 36px; text-transform: uppercase">Iniciar sesión</h1>
+      <label for="password" style="font-size: 13px; font-weight: 600">Contraseña</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px">
+      <p id="login-error" role="alert" hidden style="margin: 0; font-size: 14px; color: #B3123F"></p>
+      <button type="submit" style="min-height: 44px; border: 0; background: #111111; color: #ffffff; font: inherit; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer">Entrar</button>
+    </form>
+
+    <section id="panel" hidden>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px">
+        <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 40px; text-transform: uppercase">Compras <span id="count" style="font-family: Inter, system-ui, sans-serif; font-size: 15px; font-weight: 400; color: #555555"></span></h1>
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600">Estado
+          <select id="filter" style="height: 44px; padding: 0 8px; border: 1px solid #8A8D91; background: #ffffff; font: inherit; font-size: 14px">
+            <option value="">Todos</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="pagado">Pagado</option>
+            <option value="entregado">Entregado</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
+        </label>
+      </div>
+      <p id="panel-error" role="alert" hidden style="font-size: 14px; color: #B3123F"></p>
+      <p id="none" hidden style="padding: 48px 0; font-size: 15px; color: #444444">Todavía no hay compras con este estado.</p>
+      <div style="overflow-x: auto">
+        <table style="width: 100%; min-width: 960px; border-collapse: collapse; font-size: 14px; line-height: 1.4">
+          <thead><tr><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Entrega</th><th>Productos</th><th>Total</th><th>Estado</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="admin.js"></script>
+</body>
+</html>

@@ -26,25 +26,25 @@ a{color:#111111}a:hover{color:#C8174A}
     <div style="max-width: 1440px; margin: 0 auto; padding: 0 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; min-height: 72px">
       <a href="#" style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; letter-spacing: 0.06em; text-decoration: none; color: #111111">TREN<span style="color: #FF4670">O</span></a>
       <nav aria-label="Principal" style="display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em">
-        <a href="#" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid #FF4670">Mujer</a>
-        <a href="#" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent">Pesas</a>
-        <a href="#" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent">Yoga</a>
-        <a href="#" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent">Cardio</a>
-        <a href="#" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent">Packs</a>
-        <a href="#" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent; color: #C8174A">Ofertas</a>
+        <a href="#" data-cat-link="Todo" data-nav-cat="Todo" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid #FF4670">Mujer</a>
+        <a href="#" data-cat-link="Pesas" data-nav-cat="Pesas" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent">Pesas</a>
+        <a href="#" data-cat-link="Yoga" data-nav-cat="Yoga" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent">Yoga</a>
+        <a href="#" data-cat-link="Cardio" data-nav-cat="Cardio" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent">Cardio</a>
+        <a href="https://www.instagram.com/treno_peru" style="text-decoration: none; padding: 12px 0; border-bottom: 3px solid transparent">Packs</a>
       </nav>
       <div style="flex: 1 1 200px; display: flex; justify-content: flex-end; align-items: center; gap: 8px">
         <label style="display: flex; align-items: center; gap: 8px; background: #F2F2F2; padding: 0 14px; height: 44px; flex: 0 1 280px; min-width: 0">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
           <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar</span>
-          <input type="search" placeholder="Buscar productos" style="border: 0; background: transparent; font: inherit; font-size: 14px; outline: none; width: 100%; min-width: 0">
+          <input id="search" type="search" placeholder="Buscar productos" style="border: 0; background: transparent; font: inherit; font-size: 14px; outline: none; width: 100%; min-width: 0">
         </label>
-        <button aria-label="Favoritos" style="position: relative; width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center">
+        <button id="favs-toggle" type="button" aria-label="Ver solo favoritos" aria-pressed="false" style="position: relative; width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
           <span id="fav-badge" hidden style="position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; border-radius: 9px; background: #FF4670; color: #111111; font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 4px"></span>
         </button>
-        <button aria-label="Carrito" style="width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center">
+        <button id="cart-button" type="button" aria-label="Carrito" style="position: relative; width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-width="2" aria-hidden="true"><path d="M5 8h14l-1 12H6L5 8z"></path><path d="M9 8V6a3 3 0 0 1 6 0v2"></path></svg>
+          <span id="cart-badge" hidden style="position: absolute; top: 4px; right: 2px; min-width: 18px; height: 18px; border-radius: 9px; background: #FF4670; color: #111111; font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 4px"></span>
         </button>
       </div>
     </div>
@@ -54,7 +54,7 @@ a{color:#111111}a:hover{color:#C8174A}
 
     <!-- breadcrumb + title -->
     <nav aria-label="Ruta" style="font-size: 13px; color: #555555; display: flex; gap: 8px; flex-wrap: wrap">
-      <a href="#" style="color: #555555">Inicio</a><span aria-hidden="true">/</span><a href="#" style="color: #555555">Mujer</a><span aria-hidden="true">/</span><span style="color: #111111">Equipamiento</span>
+      <a href="#" data-cat-link="Todo" style="color: #555555">Inicio</a><span aria-hidden="true">/</span><a href="#" data-cat-link="Todo" style="color: #555555">Mujer</a><span aria-hidden="true">/</span><span style="color: #111111">Equipamiento</span>
     </nav>
     <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin: 16px 0 8px">
       <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 48px; line-height: 1; text-transform: uppercase; letter-spacing: 0.01em">Entrena mujer</h1>
@@ -80,21 +80,22 @@ a{color:#111111}a:hover{color:#C8174A}
 
         <h2 style="margin: 0 0 12px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em">Precio</h2>
         <div style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; margin-bottom: 28px">
-          <label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #111111">Hasta S/ 70</label>
-          <label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #111111">S/ 70 – S/ 150</label>
-          <label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #111111">Más de S/ 150</label>
+          <label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" data-price="low" style="width: 18px; height: 18px; accent-color: #111111">Hasta S/ 70</label>
+          <label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" data-price="mid" style="width: 18px; height: 18px; accent-color: #111111">S/ 70 – S/ 150</label>
+          <label style="display: flex; align-items: center; gap: 10px; min-height: 36px"><input type="checkbox" data-price="high" style="width: 18px; height: 18px; accent-color: #111111">Más de S/ 150</label>
         </div>
 
         <h2 style="margin: 0 0 12px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em">Disponibilidad</h2>
-        <label style="display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px"><input type="checkbox" style="width: 18px; height: 18px; accent-color: #111111">Solo con stock</label>
+        <label style="display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px"><input id="in-stock" type="checkbox" style="width: 18px; height: 18px; accent-color: #111111">Solo con stock</label>
       </aside>
 
       <!-- product grid -->
       <section aria-label="Productos" style="flex: 999 1 560px; min-width: 0">
+        <p id="load-error" role="alert" hidden style="padding: 48px 0; font-size: 15px; color: #444444">No pudimos cargar los productos. Recarga la página o haz tu pedido al 957 503 022.</p>
         <p id="empty" hidden style="padding: 48px 0; font-size: 15px; color: #444444">No hay productos con esos filtros.</p>
         <div id="grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 32px 16px">
-          <a id="promo" href="#" style="grid-column: span 2; position: relative; display: block; min-height: 420px; background: #111111; color: #ffffff; text-decoration: none; overflow: hidden">
-            <img src="assets/img/promo-tu-gym-en-casa.jpg" alt="Mujer entrenando con mancuernas rosadas sobre un mat" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%">
+          <a id="promo" href="https://www.instagram.com/treno_peru" style="grid-column: span 2; position: relative; display: block; min-height: 420px; background: #111111; color: #ffffff; text-decoration: none; overflow: hidden">
+            <img data-optional src="assets/img/promo-tu-gym-en-casa.jpg" alt="Mujer entrenando con mancuernas rosadas sobre un mat" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%">
             <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 28px; background: #FF4670; color: #111111">
               <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 40px; line-height: 1; text-transform: uppercase">Tu gym en casa</div>
               <div style="margin-top: 8px; font-size: 14px; font-weight: 500">Arma tu pack: mat + mancuernas + bandas</div>
@@ -105,7 +106,7 @@ a{color:#111111}a:hover{color:#C8174A}
 
         <!-- editorial band -->
         <div style="display: flex; flex-wrap: wrap; margin-top: 56px; background: #ABD3D1; color: #111111">
-          <img src="assets/img/editorial-mas-fuerte.jpg" alt="Mujer entrenando con mancuernas en casa" loading="lazy" style="flex: 1 1 320px; min-width: 0; height: 340px; object-fit: cover">
+          <img data-optional src="assets/img/editorial-mas-fuerte.jpg" alt="Mujer entrenando con mancuernas en casa" loading="lazy" style="flex: 1 1 320px; min-width: 0; height: 340px; object-fit: cover">
           <div style="flex: 1 1 320px; padding: 40px; display: flex; flex-direction: column; justify-content: center; gap: 12px">
             <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 44px; line-height: 1; text-transform: uppercase">Más fuerte cada semana</div>
             <p style="margin: 0; font-size: 15px; line-height: 1.5; color: #1E3434">Escríbenos por Instagram y te armamos un pack a tu medida, con delivery a todo Lima.</p>
@@ -120,11 +121,11 @@ a{color:#111111}a:hover{color:#C8174A}
             <a href="https://www.instagram.com/treno_peru" style="font-size: 14px; font-weight: 700">Ver más en Instagram</a>
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px">
-            <img src="assets/img/ig-1.jpg" alt="Entrenamiento con pesa rusa en casa" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
-            <img src="assets/img/ig-2.jpg" alt="Entrenamiento con pesa rusa en el parque" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
-            <img src="assets/img/ig-3.jpg" alt="Ejercicio con rueda abdominal sobre mat" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
-            <img src="assets/img/ig-4.jpg" alt="Ejercicio de pie con pesa rusa" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
-            <img src="assets/img/ig-5.jpg" alt="Sentadillas con pesa rusa al aire libre" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
+            <img data-optional src="assets/img/ig-1.jpg" alt="Entrenamiento con pesa rusa en casa" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
+            <img data-optional src="assets/img/ig-2.jpg" alt="Entrenamiento con pesa rusa en el parque" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
+            <img data-optional src="assets/img/ig-3.jpg" alt="Ejercicio con rueda abdominal sobre mat" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
+            <img data-optional src="assets/img/ig-4.jpg" alt="Ejercicio de pie con pesa rusa" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
+            <img data-optional src="assets/img/ig-5.jpg" alt="Sentadillas con pesa rusa al aire libre" loading="lazy" style="width: 100%; aspect-ratio: 158 / 189; object-fit: cover; display: block">
           </div>
         </div>
       </section>
@@ -138,6 +139,28 @@ a{color:#111111}a:hover{color:#C8174A}
     </div>
   </footer>
 </div>
+  <dialog id="cart" aria-labelledby="cart-title" style="width: min(480px, 100%); max-width: 100%; height: 100%; max-height: 100%; margin: 0 0 0 auto; padding: 24px; box-sizing: border-box; border: 0; font-family: Inter, system-ui, sans-serif; color: #111111">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px">
+      <h2 id="cart-title" style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 32px; text-transform: uppercase">Tu carrito</h2>
+      <button id="cart-close" type="button" style="min-height: 44px; border: 0; background: transparent; font: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; color: #111111">Cerrar</button>
+    </div>
+    <div id="cart-done" role="status" hidden style="margin-top: 16px; padding: 16px; background: #ABD3D1; font-size: 15px; line-height: 1.5">
+      <strong>¡Recibimos tu pedido <span id="done-order"></span>!</strong> Total: <span id="done-total"></span>. Te contactaremos para coordinar el pago y la entrega. También puedes llamarnos al 957 503 022.
+    </div>
+    <p id="cart-empty" style="margin: 24px 0; font-size: 15px; color: #444444">Tu carrito está vacío.</p>
+    <ul id="cart-lines" style="margin: 8px 0 0; padding: 0; list-style: none"></ul>
+    <form id="checkout" hidden style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px">
+      <div style="display: flex; justify-content: space-between; font-size: 16px; font-weight: 700"><span>Total</span><span id="cart-total"></span></div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #444444">No se cobra nada en esta página. Confirmas tu pedido y te contactamos para coordinar el pago y el costo de delivery.</p>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Nombre completo<input name="name" required maxlength="120" autocomplete="name" style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px; font-weight: 400"></label>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Teléfono<input name="phone" type="tel" required maxlength="20" autocomplete="tel" style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px; font-weight: 400"></label>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Dirección<input name="address" required maxlength="240" autocomplete="street-address" style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px; font-weight: 400"></label>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Distrito o ciudad<input name="city" required maxlength="80" style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px; font-weight: 400"></label>
+      <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Notas (opcional)<textarea name="notes" rows="2" maxlength="500" style="padding: 10px 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px; font-weight: 400; resize: vertical"></textarea></label>
+      <p id="checkout-error" role="alert" hidden style="margin: 0; font-size: 14px; color: #B3123F"></p>
+      <button id="checkout-submit" type="submit" style="min-height: 48px; border: 0; background: #111111; color: #ffffff; font: inherit; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer">Confirmar pedido</button>
+    </form>
+  </dialog>
 <script src="app.js"></script>
 </body>
 </html>
