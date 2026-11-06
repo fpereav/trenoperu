@@ -180,8 +180,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Instagram */
 .social { padding-block: 32px 64px; }
-.social__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 24px; }
-.social__grid img { display: block; width: 100%; aspect-ratio: 1 / 1; border-radius: 4px; object-fit: cover; background: var(--soft); }
 .social__link { margin: 24px 0 0; text-align: center; }
 
 /* Footer */
@@ -226,8 +224,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .hero__text { grid-column: 1; grid-row: 2; padding-block: 16px 24px; }
   .filters__panel { grid-template-columns: minmax(0, 1fr); }
   .promos { grid-template-columns: minmax(0, 1fr); }
-  .social__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .social__grid img:nth-child(n + 4) { display: none; }
 }
 
 @media (max-width: 560px) {
