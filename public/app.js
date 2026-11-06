@@ -213,7 +213,6 @@
     titleLink.dataset.product = p.id;
     title.appendChild(titleLink);
     card.appendChild(title);
-    if (p.description) card.appendChild(el('p', 'card__description', p.description));
     card.appendChild(el('div', 'card__meta', p.cat + ' · ' + COLORS[color][0]));
     card.appendChild(fillPrice(el('div', 'card__price'), p));
 
