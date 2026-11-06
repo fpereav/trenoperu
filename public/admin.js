@@ -296,6 +296,126 @@
     return item;
   }
 
+  /* Options such as 10 kg or 20 kg */
+
+  function totalStock(product) {
+    if (!product.variants.length) return product.stock;
+    return product.variants.reduce(function (sum, variant) { return sum + variant.stock; }, 0);
+  }
+
+  function numberInput(step, min, ariaLabel, value) {
+    var input = el('input', 'input');
+    input.type = 'number';
+    input.step = step;
+    input.min = min;
+    input.setAttribute('aria-label', ariaLabel);
+    if (value !== undefined) input.value = value;
+    return input;
+  }
+
+  function labelled(text, input) {
+    var label = el('label', 'field', text);
+    label.appendChild(input);
+    return label;
+  }
+
+  function variantEditor(product, variant, row) {
+    var isNew = !variant;
+    var ownerLabel = isNew ? 'nueva presentación de ' + product.name : variant.label + ' de ' + product.name;
+    var box = el('div', 'variant' + (isNew ? ' variant--new' : ''));
+
+    var label = el('input', 'input');
+    label.type = 'text';
+    label.maxLength = 40;
+    label.placeholder = 'Ej.: 10 kg';
+    label.value = isNew ? '' : variant.label;
+    label.setAttribute('aria-label', 'Nombre de ' + ownerLabel);
+    box.appendChild(labelled('Presentación', label));
+
+    var price = numberInput('0.01', '0.01', 'Precio de ' + ownerLabel, isNew ? undefined : variant.price.toFixed(2));
+    box.appendChild(labelled('Precio (S/)', price));
+    var percent = numberInput('0.01', '0', 'Descuento en porcentaje de ' + ownerLabel,
+      !isNew && variant.discount > 0 ? String(roundMoney(variant.discount * 100 / variant.price)) : '');
+    percent.placeholder = '0';
+    box.appendChild(labelled('Dcto. (%)', percent));
+    var amount = numberInput('0.01', '0', 'Descuento en soles de ' + ownerLabel,
+      !isNew && variant.discount > 0 ? variant.discount.toFixed(2) : '');
+    amount.placeholder = '0.00';
+    box.appendChild(labelled('Dcto. (S/)', amount));
+
+    var finalBox = el('div', 'final-price', 'Final');
+    var finalOutput = el('output');
+    finalOutput.setAttribute('aria-label', 'Precio final de ' + ownerLabel);
+    finalBox.appendChild(finalOutput);
+    box.appendChild(finalBox);
+
+    var stock = numberInput('1', '0', 'Stock de ' + ownerLabel, isNew ? undefined : variant.stock);
+    box.appendChild(labelled('Stock', stock));
+
+    var actions = el('div', 'variant__actions');
+    var save = button('btn' + (isNew ? ' btn--primary' : ''), isNew ? 'Agregar' : 'Guardar', function () {
+      save.disabled = true;
+      var data = {
+        label: label.value,
+        price: Number(price.value),
+        discount: Number(amount.value) || 0,
+        stock: Number(stock.value)
+      };
+      var request = isNew
+        ? api('/api/admin/products/' + product.id + '/variants', jsonRequest('POST', data))
+        : api('/api/admin/products/' + product.id + '/variants/' + variant.id, jsonRequest('PATCH', Object.assign({ expected: variant.stock }, data)));
+      request.then(function (body) {
+        product.variants = body.variants;
+        refreshRow(product, row, isNew ? 'Presentación agregada.' : 'Presentación guardada.');
+      }).catch(function (error) {
+        sync();
+        handleError(error, row);
+      });
+    });
+    save.setAttribute('aria-label', (isNew ? 'Agregar ' : 'Guardar ') + ownerLabel);
+    actions.appendChild(save);
+    if (!isNew) {
+      var remove = button('link link--danger', 'Eliminar', function () {
+        if (!window.confirm('¿Eliminar la presentación ' + variant.label + ' de ' + product.name + '? Se perderá su stock.')) return;
+        api('/api/admin/products/' + product.id + '/variants/' + variant.id, { method: 'DELETE' }).then(function (body) {
+          product.variants = body.variants;
+          refreshRow(product, row, 'Presentación eliminada.');
+        }).catch(function (error) { handleError(error, row); });
+      });
+      remove.setAttribute('aria-label', 'Eliminar ' + ownerLabel);
+      actions.appendChild(remove);
+    }
+    box.appendChild(actions);
+
+    var discountValid = true;
+    function sync() {
+      var filled = label.value.trim() !== '' && Number(price.value) > 0 && stock.value !== '' && Number(stock.value) >= 0;
+      var unchanged = !isNew && label.value === variant.label && Number(price.value) === variant.price &&
+        roundMoney(Number(amount.value) || 0) === variant.discount && Number(stock.value) === variant.stock;
+      save.disabled = !filled || !discountValid || unchanged;
+    }
+    bindDiscount(price, percent, amount, finalOutput, function (valid) {
+      discountValid = valid;
+      sync();
+    });
+    label.addEventListener('input', sync);
+    stock.addEventListener('input', sync);
+    return box;
+  }
+
+  function variantsSection(product, row) {
+    var section = el('div', 'variants');
+    section.appendChild(el('h3', 'panel__title', 'Presentaciones (peso o tamaño)'));
+    section.appendChild(el('p', 'variants__help', product.variants.length
+      ? 'Cada presentación tiene su propio precio, descuento y stock.'
+      : 'Opcional. Agrégalas si el producto se vende en varios pesos o tamaños, por ejemplo 10 kg, 15 kg y 20 kg.'));
+    product.variants.forEach(function (variant) {
+      section.appendChild(variantEditor(product, variant, row));
+    });
+    section.appendChild(variantEditor(product, null, row));
+    return section;
+  }
+
   /* Product rows */
 
   function setStatus(row, message, isError) {
@@ -458,6 +578,8 @@
     priceLabel.appendChild(price);
 
     var priceGrid = el('div', 'price-grid');
+    // With options, price and discount are set per option.
+    priceGrid.hidden = product.variants.length > 0;
     priceGrid.appendChild(priceLabel);
     var finalBox = el('div', 'final-price', 'Precio final');
     var finalOutput = el('output');
@@ -542,6 +664,8 @@
     info.appendChild(fields);
     panel.appendChild(info);
 
+    panel.appendChild(variantsSection(product, row));
+
     var media = el('div');
     media.appendChild(el('h3', 'panel__title', 'Colores y fotos'));
     product.colors.concat('principal').forEach(function (slot) {
@@ -579,13 +703,19 @@
       dots.appendChild(dot);
     });
     meta.appendChild(dots);
-    if (product.stock === 0) meta.appendChild(el('span', 'badge badge--out', 'Sin stock · oculto'));
-    else if (product.stock <= LOW_STOCK) meta.appendChild(el('span', 'badge badge--low', 'Stock bajo'));
+    var hasVariants = product.variants.length > 0;
+    var total = totalStock(product);
+    if (hasVariants) meta.appendChild(el('span', '', product.variants.length + (product.variants.length === 1 ? ' presentación' : ' presentaciones')));
+    if (total === 0) meta.appendChild(el('span', 'badge badge--out', 'Sin stock · oculto'));
+    else if (total <= LOW_STOCK) meta.appendChild(el('span', 'badge badge--low', 'Stock bajo'));
     info.appendChild(meta);
     top.appendChild(info);
 
-    var priceBox = el('div', 'product__price', money(roundMoney(product.price - product.discount)));
-    if (product.discount > 0) {
+    var finals = product.variants.map(function (v) { return roundMoney(v.price - v.discount); });
+    var priceBox = el('div', 'product__price', hasVariants
+      ? (Math.min.apply(null, finals) === Math.max.apply(null, finals) ? '' : 'Desde ') + money(Math.min.apply(null, finals))
+      : money(roundMoney(product.price - product.discount)));
+    if (!hasVariants && product.discount > 0) {
       priceBox.appendChild(document.createElement('br'));
       priceBox.appendChild(el('s', 'price-was', money(product.price)));
       priceBox.appendChild(document.createTextNode(' '));
@@ -601,6 +731,8 @@
     stock.step = '1';
     stock.value = product.stock;
     stock.setAttribute('aria-label', 'Stock de ' + product.name);
+    stock.hidden = hasVariants;
+    if (hasVariants) stockBox.appendChild(el('span', 'product__stock-total', 'Stock: ' + total));
     stockBox.appendChild(stock);
     var saveStock = button('btn', 'Guardar', function () {
       saveStock.disabled = true;
@@ -616,6 +748,7 @@
       });
     });
     saveStock.disabled = true;
+    saveStock.hidden = hasVariants;
     saveStock.setAttribute('aria-label', 'Guardar stock de ' + product.name);
     stock.addEventListener('input', function () {
       saveStock.disabled = stock.value === String(product.stock);
@@ -644,8 +777,9 @@
     var query = normalize(byId('product-search').value.trim());
     var filter = byId('product-filter').value;
     var shown = products.filter(function (product) {
-      if (filter === 'out' && product.stock !== 0) return false;
-      if (filter === 'low' && (product.stock === 0 || product.stock > LOW_STOCK)) return false;
+      var total = totalStock(product);
+      if (filter === 'out' && total !== 0) return false;
+      if (filter === 'low' && (total === 0 || total > LOW_STOCK)) return false;
       return !query || normalize(product.name + ' ' + product.cat).indexOf(query) >= 0;
     });
     byId('product-count').textContent = shown.length + (shown.length === 1 ? ' producto' : ' productos');

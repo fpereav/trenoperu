@@ -20,7 +20,7 @@
   var state = {
     cat: 'Todo', color: null, sort: 'rel', query: '', prices: {}, onlyFavs: false,
     favs: load(FAVS_KEY, {}), cart: load(CART_KEY, []), picked: {}, loadError: false,
-    detailId: null, detailPhoto: null, loaded: false
+    detailId: null, detailPhoto: null, loaded: false, pickedVariants: {}
   };
 
   function load(key, fallback) {
@@ -85,15 +85,25 @@
     return state.color && p.colors.indexOf(state.color) >= 0 ? state.color : p.colors[0];
   }
 
+  function pickedVariant(p) {
+    var variants = p.variants || [];
+    return variants.find(function (v) { return v.id === state.pickedVariants[p.id]; }) || variants[0] || null;
+  }
+
   function addToCart(p) {
     var color = pickedColor(p);
+    var variant = pickedVariant(p);
     var cart = state.cart.slice();
     byId('cart-done').hidden = true;
-    var line = cart.find(function (l) { return l.id === p.id && l.color === color; });
+    var line = cart.find(function (l) {
+      return l.id === p.id && l.color === color && (l.variant || null) === (variant ? variant.id : null);
+    });
     if (line) {
       cart[cart.indexOf(line)] = Object.assign({}, line, { qty: Math.min(line.qty + 1, 20) });
     } else {
-      cart.push({ id: p.id, color: color, qty: 1 });
+      var added = { id: p.id, color: color, qty: 1 };
+      if (variant) added.variant = variant.id;
+      cart.push(added);
     }
     setCart(cart);
     openCart();
@@ -222,16 +232,20 @@
     });
     card.appendChild(swatches);
 
-    var add = button('button button--outline', p.inStock ? 'Agregar' : 'Agotado', function () { addToCart(p); });
+    var hasOptions = (p.variants || []).length > 0;
+    var add = button('button button--outline', hasOptions ? 'Ver opciones' : p.inStock ? 'Agregar' : 'Agotado', function () {
+      if (hasOptions) location.hash = '#producto/' + p.id;
+      else addToCart(p);
+    });
     add.disabled = !p.inStock;
-    add.setAttribute('aria-label', (p.inStock ? 'Agregar al carrito: ' : 'Agotado: ') + p.name);
+    add.setAttribute('aria-label', (hasOptions ? 'Ver opciones de ' : p.inStock ? 'Agregar al carrito: ' : 'Agotado: ') + p.name);
     card.appendChild(add);
     return card;
   }
 
   // Current price, plus the previous one crossed out when there is a discount.
   function fillPrice(node, p) {
-    var nodes = [document.createTextNode(money(p.price))];
+    var nodes = [document.createTextNode((p.priceFrom ? 'Desde ' : '') + money(p.price))];
     if (p.discountPercent > 0) {
       nodes.push(document.createTextNode(' '));
       nodes.push(el('s', 'price-was', money(p.listPrice)));
@@ -281,13 +295,25 @@
 
     byId('product-name').textContent = p.name;
     byId('product-meta').textContent = p.cat + ' · ' + COLORS[color][0];
-    fillPrice(byId('product-price'), p);
+    var variant = pickedVariant(p);
+    fillPrice(byId('product-price'), variant || p);
+    var optionsBox = byId('product-options');
+    optionsBox.hidden = !variant;
+    fill(byId('product-variants'), (p.variants || []).map(function (option) {
+      var chip = button('option-chip', option.label, function () {
+        var picked = Object.assign({}, state.pickedVariants);
+        picked[p.id] = option.id;
+        setState({ pickedVariants: picked });
+      });
+      chip.setAttribute('aria-pressed', String(variant && option.id === variant.id));
+      return chip;
+    }));
     var description = byId('product-description');
     description.textContent = p.description;
     description.hidden = !p.description;
 
     var badge = byId('product-badge');
-    badge.textContent = !p.inStock ? 'Agotado' : p.low ? 'Últimas unidades' : '';
+    badge.textContent = !p.inStock ? 'Agotado' : (variant ? variant.low : p.low) ? 'Últimas unidades' : '';
     badge.hidden = !badge.textContent;
 
     fill(byId('product-swatches'), p.colors.map(function (key) {
@@ -399,7 +425,9 @@
 
   function cartLines() {
     return state.cart.map(function (line) {
-      return { line: line, product: products.find(function (p) { return p.id === line.id; }) };
+      var product = products.find(function (p) { return p.id === line.id; });
+      var variant = product && (product.variants || []).find(function (v) { return v.id === line.variant; });
+      return { line: line, product: product, variant: variant, price: variant ? variant.price : product && product.price };
     }).filter(function (entry) { return entry.product; });
   }
 
@@ -416,10 +444,10 @@
     var row = el('li', 'cart-line');
     var top = el('div', 'cart-line__top');
     var info = el('div');
-    info.appendChild(el('div', 'cart-line__name', p.name));
+    info.appendChild(el('div', 'cart-line__name', entry.variant ? p.name + ' · ' + entry.variant.label : p.name));
     info.appendChild(el('div', 'cart-line__color', COLORS[line.color] ? COLORS[line.color][0] : line.color));
     top.appendChild(info);
-    top.appendChild(el('div', 'cart-line__price', money(p.price * line.qty)));
+    top.appendChild(el('div', 'cart-line__price', money(entry.price * line.qty)));
     row.appendChild(top);
 
     var controls = el('div', 'cart-line__controls');
@@ -441,7 +469,7 @@
   function renderCart() {
     var lines = cartLines();
     var units = lines.reduce(function (sum, e) { return sum + e.line.qty; }, 0);
-    var total = lines.reduce(function (sum, e) { return sum + e.line.qty * e.product.price; }, 0);
+    var total = lines.reduce(function (sum, e) { return sum + e.line.qty * e.price; }, 0);
 
     var cartBadge = byId('cart-badge');
     cartBadge.hidden = units === 0;
@@ -523,7 +551,11 @@
       // Drop cart lines for products no longer on sale or colors no longer offered.
       var validCart = state.cart.filter(function (line) {
         var product = products.find(function (item) { return item.id === line.id; });
-        return product && product.colors.indexOf(line.color) >= 0;
+        if (!product || product.colors.indexOf(line.color) < 0) return false;
+        var variants = product.variants || [];
+        return variants.length
+          ? variants.some(function (v) { return v.id === line.variant; })
+          : !line.variant;
       });
       if (validCart.length !== state.cart.length) {
         save(CART_KEY, validCart);

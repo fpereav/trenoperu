@@ -215,6 +215,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .product__price { font-size: 24px; font-weight: 700; }
 .product__description { margin: 4px 0; color: #333333; white-space: pre-line; overflow-wrap: anywhere; }
 .product__label { margin-top: 4px; font-size: 13px; font-weight: 700; }
+.option-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.option-chip { min-height: 44px; min-width: 56px; padding: 0 14px; border: 1px solid #BDBDBD; border-radius: 4px; background: #ffffff; font-size: 14px; font-weight: 600; cursor: pointer; }
+.option-chip:hover { border-color: var(--ink); }
+.option-chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #ffffff; }
 .product__swatches { justify-content: flex-start; margin: 0 0 8px -6px; }
 .swatch--large { width: 36px; height: 36px; border-width: 7px; }
 .product__info .button { width: 100%; min-height: 48px; }

@@ -22,6 +22,14 @@ MAX_STOCK = 100_000
 MAX_IMAGE_BYTES = 2_000_000
 MAIN_SLOT = "principal"
 MAX_PHOTOS_PER_SLOT = 10
+VARIANT_LABEL_MAX = 40
+MAX_VARIANTS_PER_PRODUCT = 30
+# On sale: an option with stock if the product has options, otherwise its own stock.
+ON_SALE_SQL = (
+    "CASE WHEN EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id) "
+    "THEN EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = p.id AND v.stock > 0) "
+    "ELSE p.stock > 0 END"
+)
 SITE_URL = os.environ.get("SITE_URL", "https://trenoperu.vercel.app").rstrip("/")
 IMAGES_WITHOUT_FILE = {"roller-pvc.jpg"}
 COLOR_KEYS = (
@@ -79,35 +87,66 @@ def uploaded_photos(conn):
     return photos
 
 
+def variants_by_product(conn, only_in_stock=False):
+    where = "WHERE stock > 0 " if only_in_stock else ""
+    grouped = {}
+    for row in rows(
+        conn,
+        "SELECT id, product_id, label, price_cents, discount_cents, stock FROM product_variants "
+        + where + "ORDER BY id",
+    ):
+        grouped.setdefault(row["product_id"], []).append(row)
+    return grouped
+
+
+def public_prices(price_cents, discount_cents):
+    return {
+        "price": (price_cents - discount_cents) / 100,
+        "listPrice": price_cents / 100,
+        "discountPercent": discount_percent(price_cents, discount_cents),
+    }
+
+
 def list_products():
     conn = connect()
     try:
         products = rows(
             conn,
-            "SELECT id, name, description, category, price_cents, discount_cents, image, colors, stock, top "
-            "FROM products WHERE stock > 0 ORDER BY sort_order",
+            "SELECT p.id, p.name, p.description, p.category, p.price_cents, p.discount_cents, "
+            "p.image, p.colors, p.stock, p.top FROM products p "
+            f"WHERE {ON_SALE_SQL} ORDER BY p.sort_order",
         )
         photos = uploaded_photos(conn)
+        variants = variants_by_product(conn, only_in_stock=True)
     finally:
         conn.close()
-    return [
-        {
-            "id": p["id"],
-            "name": p["name"],
-            "description": p["description"],
-            "cat": p["category"],
-            "price": (p["price_cents"] - p["discount_cents"]) / 100,
-            "listPrice": p["price_cents"] / 100,
-            "discountPercent": discount_percent(p["price_cents"], p["discount_cents"]),
-            "img": p["image"],
-            "photos": photos.get(p["id"], {}),
-            "colors": p["colors"],
-            "inStock": p["stock"] > 0,
-            "low": 0 < p["stock"] <= 2,
-            "top": p["top"],
-        }
-        for p in products
-    ]
+    result = []
+    for p in products:
+        options = variants.get(p["id"], [])
+        # With options, the product shows its lowest current price.
+        cheapest = min(options, key=lambda v: v["price_cents"] - v["discount_cents"]) if options else p
+        stock = sum(v["stock"] for v in options) if options else p["stock"]
+        finals = {v["price_cents"] - v["discount_cents"] for v in options}
+        result.append(dict(
+            public_prices(cheapest["price_cents"], cheapest["discount_cents"]),
+            id=p["id"],
+            name=p["name"],
+            description=p["description"],
+            cat=p["category"],
+            img=p["image"],
+            photos=photos.get(p["id"], {}),
+            colors=p["colors"],
+            inStock=stock > 0,
+            low=0 < stock <= 2,
+            top=p["top"],
+            priceFrom=len(finals) > 1,
+            variants=[
+                dict(public_prices(v["price_cents"], v["discount_cents"]),
+                     id=v["id"], label=v["label"], low=v["stock"] <= 2)
+                for v in options
+            ],
+        ))
+    return result
 
 
 def clean_customer(raw):
@@ -137,11 +176,15 @@ def clean_items(raw):
         if not isinstance(item, dict):
             raise ApiError(400, "Tu carrito no es válido.")
         product_id, color, qty = item.get("id"), item.get("color"), item.get("qty")
+        variant = item.get("variant")
         if not isinstance(product_id, str) or not isinstance(color, str):
+            raise ApiError(400, "Tu carrito no es válido.")
+        if variant is not None and (isinstance(variant, bool) or not isinstance(variant, int)):
             raise ApiError(400, "Tu carrito no es válido.")
         if isinstance(qty, bool) or not isinstance(qty, int) or not 1 <= qty <= MAX_QTY:
             raise ApiError(400, "Revisa las cantidades de tu carrito.")
-        merged[(product_id, color)] = merged.get((product_id, color), 0) + qty
+        key = (product_id, variant, color)
+        merged[key] = merged.get(key, 0) + qty
     return merged
 
 
@@ -163,13 +206,10 @@ def create_order(payload, client_ip):
         if recent >= ORDERS_PER_IP_PER_HOUR:
             raise ApiError(429, "Recibimos varios pedidos seguidos. Llámanos al 957 503 022.")
 
-        quantities = {}
-        for (product_id, _), qty in items.items():
-            quantities[product_id] = quantities.get(product_id, 0) + qty
-
         products = {}
+        options = {}
         # Sorted locking keeps two concurrent checkouts from deadlocking.
-        for product_id in sorted(quantities):
+        for product_id in sorted({key[0] for key in items}):
             found = rows(
                 conn,
                 "SELECT id, name, price_cents, discount_cents, colors, stock FROM products "
@@ -178,18 +218,47 @@ def create_order(payload, client_ip):
             )
             if not found:
                 raise ApiError(409, "Uno de los productos ya no está disponible.")
-            product = found[0]
-            # Customers pay the discounted price, whatever the browser sent.
-            product["price_cents"] -= product["discount_cents"]
-            if product["stock"] < quantities[product_id]:
-                raise ApiError(409, "No hay stock suficiente de " + product["name"] + ".")
-            products[product_id] = product
+            products[product_id] = found[0]
+            options[product_id] = {
+                v["id"]: v
+                for v in rows(
+                    conn,
+                    "SELECT id, label, price_cents, discount_cents, stock FROM product_variants "
+                    "WHERE product_id = :id ORDER BY id FOR UPDATE",
+                    id=product_id,
+                )
+            }
 
+        # Quantity per stock holder: the chosen option, or the product without options.
+        wanted = {}
         total = 0
-        for (product_id, color), qty in items.items():
-            if color not in products[product_id]["colors"]:
+        lines = []
+        for (product_id, variant_id, color), qty in items.items():
+            product = products[product_id]
+            if color not in product["colors"]:
                 raise ApiError(400, "Revisa el color elegido.")
-            total += products[product_id]["price_cents"] * qty
+            product_options = options[product_id]
+            if product_options:
+                if variant_id not in product_options:
+                    raise ApiError(409, "Elige de nuevo la presentación de " + product["name"] + ".")
+                holder = product_options[variant_id]
+            else:
+                if variant_id is not None:
+                    raise ApiError(409, "Elige de nuevo " + product["name"] + ".")
+                holder = product
+            # Customers pay the discounted price, whatever the browser sent.
+            price = holder["price_cents"] - holder["discount_cents"]
+            total += price * qty
+            wanted[(product_id, variant_id)] = wanted.get((product_id, variant_id), 0) + qty
+            lines.append((product, holder, variant_id, color, price, qty))
+
+        for (product_id, variant_id), qty in wanted.items():
+            holder = options[product_id][variant_id] if variant_id is not None else products[product_id]
+            if holder["stock"] < qty:
+                label = products[product_id]["name"]
+                if variant_id is not None:
+                    label += " " + holder["label"]
+                raise ApiError(409, "No hay stock suficiente de " + label + ".")
 
         order_id = conn.run(
             "INSERT INTO orders (customer_name, phone, address, city, notes, total_cents, ip_hash) "
@@ -198,25 +267,36 @@ def create_order(payload, client_ip):
             ip=ip_hash,
             **customer,
         )[0][0]
-        for (product_id, color), qty in items.items():
-            product = products[product_id]
-            conn.run(
-                "INSERT INTO order_items "
-                "(order_id, product_id, product_name, color, unit_price_cents, quantity) "
-                "VALUES (:order_id, :product_id, :name, :color, :price, :qty)",
+        for product, holder, variant_id, color, price, qty in lines:
+            params = dict(
                 order_id=order_id,
-                product_id=product_id,
+                product_id=product["id"],
                 name=product["name"],
                 color=color,
-                price=product["price_cents"],
+                price=price,
                 qty=qty,
             )
-        for product_id, qty in quantities.items():
-            conn.run(
-                "UPDATE products SET stock = stock - :qty WHERE id = :id",
-                qty=qty,
-                id=product_id,
-            )
+            if variant_id is None:
+                conn.run(
+                    "INSERT INTO order_items "
+                    "(order_id, product_id, product_name, color, unit_price_cents, quantity) "
+                    "VALUES (:order_id, :product_id, :name, :color, :price, :qty)",
+                    **params,
+                )
+            else:
+                conn.run(
+                    "INSERT INTO order_items (order_id, product_id, product_name, color, "
+                    "unit_price_cents, quantity, variant_id, variant_label) "
+                    "VALUES (:order_id, :product_id, :name, :color, :price, :qty, :variant, :label)",
+                    variant=variant_id,
+                    label=holder["label"],
+                    **params,
+                )
+        for (product_id, variant_id), qty in wanted.items():
+            if variant_id is None:
+                conn.run("UPDATE products SET stock = stock - :qty WHERE id = :id", qty=qty, id=product_id)
+            else:
+                conn.run("UPDATE product_variants SET stock = stock - :qty WHERE id = :id", qty=qty, id=variant_id)
         conn.run("COMMIT")
     except Exception:
         conn.run("ROLLBACK")
@@ -233,7 +313,7 @@ def admin_orders():
             conn,
             "SELECT o.id, o.created_at, o.status, o.customer_name, o.phone, o.address, o.city, "
             "o.notes, o.total_cents, json_agg(json_build_object("
-            "'name', i.product_name, 'color', i.color, 'qty', i.quantity, "
+            "'name', i.product_name, 'variant', i.variant_label, 'color', i.color, 'qty', i.quantity, "
             "'price', i.unit_price_cents) ORDER BY i.id) AS items "
             "FROM orders o JOIN order_items i ON i.order_id = o.id "
             "GROUP BY o.id ORDER BY o.created_at DESC LIMIT 500",
@@ -252,7 +332,8 @@ def admin_orders():
             "notes": o["notes"],
             "total": o["total_cents"] / 100,
             "items": [
-                {"name": i["name"], "color": i["color"], "qty": i["qty"], "price": i["price"] / 100}
+                {"name": (i["name"] + " " + i["variant"]).strip(), "color": i["color"], "qty": i["qty"],
+                 "price": i["price"] / 100}
                 for i in o["items"]
             ],
         }
@@ -276,7 +357,16 @@ def set_order_status(order_id, status):
             conn.run(
                 "UPDATE products p SET stock = p.stock + i.quantity FROM ("
                 "SELECT product_id, sum(quantity)::int AS quantity FROM order_items "
-                "WHERE order_id = :id GROUP BY product_id) i WHERE p.id = i.product_id",
+                "WHERE order_id = :id AND variant_label = '' GROUP BY product_id) i "
+                "WHERE p.id = i.product_id",
+                id=order_id,
+            )
+            # An option deleted since the sale has nowhere to return its stock.
+            conn.run(
+                "UPDATE product_variants v SET stock = v.stock + i.quantity FROM ("
+                "SELECT variant_id, sum(quantity)::int AS quantity FROM order_items "
+                "WHERE order_id = :id AND variant_id IS NOT NULL GROUP BY variant_id) i "
+                "WHERE v.id = i.variant_id",
                 id=order_id,
             )
         conn.run("UPDATE orders SET status = :status WHERE id = :id", status=status, id=order_id)
@@ -298,10 +388,12 @@ def admin_products():
             "FROM products ORDER BY sort_order",
         )
         photos = uploaded_photos(conn)
+        variants = variants_by_product(conn)
     finally:
         conn.close()
     return [
         {"id": p["id"], "name": p["name"], "description": p["description"], "cat": p["category"],
+         "variants": [admin_variant(v) for v in variants.get(p["id"], [])],
          "price": p["price_cents"] / 100, "discount": p["discount_cents"] / 100,
          "stock": p["stock"], "img": p["image"],
          "colors": p["colors"], "photos": photos.get(p["id"], {})}
@@ -395,7 +487,7 @@ def create_product(payload):
     return {"id": p["id"], "name": p["name"], "description": p["description"], "cat": p["category"],
             "price": p["price_cents"] / 100, "discount": p["discount_cents"] / 100,
             "stock": p["stock"], "img": p["image"],
-            "colors": p["colors"], "photos": {}}
+            "colors": p["colors"], "photos": {}, "variants": []}
 
 
 def set_product_details(product_id, payload):
@@ -519,6 +611,96 @@ def read_product_photo(image_id):
     return bytes(found[0][0])
 
 
+def admin_variant(v):
+    return {"id": v["id"], "label": v["label"], "price": v["price_cents"] / 100,
+            "discount": v["discount_cents"] / 100, "stock": v["stock"]}
+
+
+def clean_variant(payload):
+    label = payload.get("label")
+    label = label.strip() if isinstance(label, str) else ""
+    if not label or len(label) > VARIANT_LABEL_MAX:
+        raise ApiError(400, f"Escribe la presentación, de hasta {VARIANT_LABEL_MAX} caracteres. Ejemplo: 10 kg.")
+    price_cents = clean_price_cents(payload.get("price"))
+    return label, price_cents, clean_discount_cents(payload.get("discount", 0), price_cents), clean_stock(payload.get("stock"))
+
+
+def variants_of(conn, product_id):
+    return [admin_variant(v) for v in variants_by_product(conn).get(product_id, [])]
+
+
+def add_product_variant(product_id, payload):
+    label, price_cents, discount_cents, stock = clean_variant(payload)
+    conn = connect()
+    try:
+        product_colors(conn, product_id)
+        existing = variants_of(conn, product_id)
+        if len(existing) >= MAX_VARIANTS_PER_PRODUCT:
+            raise ApiError(409, f"Cada producto admite hasta {MAX_VARIANTS_PER_PRODUCT} presentaciones.")
+        if any(v["label"].lower() == label.lower() for v in existing):
+            raise ApiError(409, "Ya existe esa presentación.")
+        conn.run(
+            "INSERT INTO product_variants (product_id, label, price_cents, discount_cents, stock) "
+            "VALUES (:id, :label, :price, :discount, :stock)",
+            id=product_id,
+            label=label,
+            price=price_cents,
+            discount=discount_cents,
+            stock=stock,
+        )
+        return {"id": product_id, "variants": variants_of(conn, product_id)}
+    finally:
+        conn.close()
+
+
+def update_product_variant(product_id, variant_id, payload):
+    label, price_cents, discount_cents, stock = clean_variant(payload)
+    expected = clean_stock(payload.get("expected"))
+    conn = connect()
+    try:
+        found = conn.run(
+            "SELECT stock FROM product_variants WHERE id = :variant AND product_id = :id",
+            variant=variant_id,
+            id=product_id,
+        )
+        if not found:
+            raise ApiError(404, "Presentación no encontrada.")
+        if any(v["id"] != variant_id and v["label"].lower() == label.lower() for v in variants_of(conn, product_id)):
+            raise ApiError(409, "Ya existe esa presentación.")
+        # Only update if unchanged, so a sale made meanwhile is never overwritten.
+        updated = conn.run(
+            "UPDATE product_variants SET label = :label, price_cents = :price, discount_cents = :discount, "
+            "stock = :stock WHERE id = :variant AND stock = :expected RETURNING id",
+            label=label,
+            price=price_cents,
+            discount=discount_cents,
+            stock=stock,
+            variant=variant_id,
+            expected=expected,
+        )
+        if not updated:
+            current = conn.run("SELECT stock FROM product_variants WHERE id = :variant", variant=variant_id)[0][0]
+            raise ApiError(409, "El stock cambió mientras editabas. Revisa la cantidad actual: " + str(current) + ".")
+        return {"id": product_id, "variants": variants_of(conn, product_id)}
+    finally:
+        conn.close()
+
+
+def delete_product_variant(product_id, variant_id):
+    conn = connect()
+    try:
+        deleted = conn.run(
+            "DELETE FROM product_variants WHERE id = :variant AND product_id = :id RETURNING id",
+            variant=variant_id,
+            id=product_id,
+        )
+        if not deleted:
+            raise ApiError(404, "Presentación no encontrada.")
+        return {"id": product_id, "variants": variants_of(conn, product_id)}
+    finally:
+        conn.close()
+
+
 def set_product_stock(product_id, payload):
     stock, expected = clean_stock(payload.get("stock")), clean_stock(payload.get("expected"))
     conn = connect()
@@ -545,16 +727,18 @@ def product_for_page(product_id):
     try:
         found = rows(
             conn,
-            "SELECT id, name, description, category, price_cents, discount_cents, image, colors FROM products "
-            "WHERE id = :id AND stock > 0",
+            "SELECT p.id, p.name, p.description, p.category, p.price_cents, p.discount_cents, p.image, p.colors "
+            f"FROM products p WHERE p.id = :id AND {ON_SALE_SQL}",
             id=product_id,
         )
         photos = photos_of(conn, product_id) if found else {}
+        options = variants_by_product(conn, only_in_stock=True).get(product_id, []) if found else []
     finally:
         conn.close()
     if not found:
         return None, None
     product = found[0]
+    product["options"] = options
     for slot in [MAIN_SLOT] + list(product["colors"]):
         if photos.get(slot):
             return product, SITE_URL + photos[slot][0]["url"]
@@ -569,14 +753,18 @@ def product_page(product_id):
         return None
     url = f"{SITE_URL}/producto/{product['id']}"
     name = product["name"]
-    price = f"{(product['price_cents'] - product['discount_cents']) / 100:.2f}"
+    options = product["options"]
+    cheapest = min(options, key=lambda v: v["price_cents"] - v["discount_cents"]) if options else product
+    finals = [v["price_cents"] - v["discount_cents"] for v in options]
+    price = f"{(cheapest['price_cents'] - cheapest['discount_cents']) / 100:.2f}"
     was = ""
-    if product["discount_cents"]:
-        percent = discount_percent(product["price_cents"], product["discount_cents"])
+    if cheapest["discount_cents"]:
+        percent = discount_percent(cheapest["price_cents"], cheapest["discount_cents"])
         was = (
-            f'<s class="price-was">S/ {product["price_cents"] / 100:.2f}</s> '
+            f'<s class="price-was">S/ {cheapest["price_cents"] / 100:.2f}</s> '
             f'<span class="price-off">-{percent:g}%</span>'
         )
+    price_prefix = "Desde " if len(set(finals)) > 1 else ""
     summary = product["description"] or f"{name} en TRENO Perú. Delivery a todo el Perú."
     data = {
         "@context": "https://schema.org",
@@ -597,9 +785,23 @@ def product_page(product_id):
     }
     if image:
         data["image"] = image
+    if len(options) > 1:
+        data["offers"] = {
+            "@type": "AggregateOffer",
+            "url": url,
+            "lowPrice": f"{min(finals) / 100:.2f}",
+            "highPrice": f"{max(finals) / 100:.2f}",
+            "offerCount": len(options),
+            "priceCurrency": "PEN",
+            "availability": "https://schema.org/InStock",
+        }
     # Keep the JSON from closing its script tag when text contains "<".
     structured = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
     esc = lambda text: html.escape(text, quote=True)
+    options_tag = ""
+    if options:
+        names = ", ".join(esc(v["label"]) for v in options)
+        options_tag = f'<div class="card__meta">Presentaciones: {names}</div>'
     image_meta = f'<meta property="og:image" content="{esc(image)}">' if image else ""
     image_tag = f'<img src="{esc(image)}" alt="{esc(name)}" width="800" height="800">' if image else ""
     description_tag = f'<p class="product__description">{esc(product["description"])}</p>' if product["description"] else ""
@@ -631,7 +833,8 @@ def product_page(product_id):
 <div class="product__info">
 <h1 class="display">{esc(name)}</h1>
 <div class="card__meta">{esc(product["category"])}</div>
-<div class="product__price">S/ {price} {was}</div>
+<div class="product__price">{price_prefix}S/ {price} {was}</div>
+{options_tag}
 {description_tag}
 <a class="button" href="/#producto/{esc(product["id"])}">Comprar</a>
 <a href="/">Ver todo el catálogo</a>
@@ -646,7 +849,7 @@ def product_page(product_id):
 def sitemap():
     conn = connect()
     try:
-        ids = [row[0] for row in conn.run("SELECT id FROM products WHERE stock > 0 ORDER BY sort_order")]
+        ids = [row[0] for row in conn.run(f"SELECT p.id FROM products p WHERE {ON_SALE_SQL} ORDER BY p.sort_order")]
     finally:
         conn.close()
     urls = [SITE_URL + "/"] + [f"{SITE_URL}/producto/{product_id}" for product_id in ids]
@@ -803,6 +1006,17 @@ class handler(BaseHTTPRequestHandler):
         if method == "PATCH" and product:
             self.require_admin()
             return self.send_json(200, set_product_stock(product.group(1), self.read_json()))
+        new_variant = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/variants", path)
+        if method == "POST" and new_variant:
+            self.require_admin()
+            return self.send_json(201, add_product_variant(new_variant.group(1), self.read_json()))
+        variant = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/variants/(\d{1,18})", path)
+        if method == "PATCH" and variant:
+            self.require_admin()
+            return self.send_json(200, update_product_variant(variant.group(1), int(variant.group(2)), self.read_json()))
+        if method == "DELETE" and variant:
+            self.require_admin()
+            return self.send_json(200, delete_product_variant(variant.group(1), int(variant.group(2))))
         details = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/details", path)
         if method == "PATCH" and details:
             self.require_admin()

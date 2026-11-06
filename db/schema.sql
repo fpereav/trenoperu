@@ -57,6 +57,22 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON order_items (order_id);
 
+-- Options of a product, such as 10 kg or 20 kg, each with its own price and stock.
+-- A product with options sells only through them, ignoring its own price and stock.
+CREATE TABLE IF NOT EXISTS product_variants (
+  id             bigserial PRIMARY KEY,
+  product_id     text NOT NULL REFERENCES products (id) ON DELETE CASCADE,
+  label          text NOT NULL,
+  price_cents    integer NOT NULL CHECK (price_cents > 0),
+  discount_cents integer NOT NULL DEFAULT 0 CHECK (discount_cents >= 0),
+  stock          integer NOT NULL CHECK (stock >= 0)
+);
+
+CREATE INDEX IF NOT EXISTS product_variants_product_idx ON product_variants (product_id, id);
+
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id bigint REFERENCES product_variants (id) ON DELETE SET NULL;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_label text NOT NULL DEFAULT '';
+
 -- Initial catalog. ON CONFLICT keeps current stock and prices when re-run.
 INSERT INTO products (id, name, category, price_cents, image, colors, stock, top, sort_order) VALUES
   ('PACKCH', 'Pack chaleco 10 kg + tobilleras 1 kg', 'Packs', 6900, 'pack-chaleco-tobilleras.jpg', '["negro"]', 8, false, 0),
