@@ -2,22 +2,39 @@
   'use strict';
 
   var STATUSES = ['pendiente', 'pagado', 'entregado', 'cancelado'];
-  var LABELS = { pendiente: 'Pendiente', pagado: 'Pagado', entregado: 'Entregado', cancelado: 'Cancelado' };
+  var LABELS = { pendiente: 'Pendientes', pagado: 'Pagados', entregado: 'Entregados', cancelado: 'Cancelados' };
+  var STATUS_NAMES = { pendiente: 'Pendiente', pagado: 'Pagado', entregado: 'Entregado', cancelado: 'Cancelado' };
+  var COLOR_LIST = window.TRENO_COLORS;
+  var LOW_STOCK = 2;
+  var MAX_PHOTO_SIDE = 1000;
+  var MAX_SOURCE_BYTES = 25 * 1024 * 1024;
   var dateFormat = new Intl.DateTimeFormat('es-PE', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Lima' });
+
   var orders = [];
+  var products = [];
+  var orderFilter = '';
+  var openProducts = {};
 
   function byId(id) { return document.getElementById(id); }
 
   function money(amount) { return 'S/ ' + amount.toFixed(2); }
 
-  function cell(lines) {
-    var td = document.createElement('td');
-    lines.forEach(function (text) {
-      var div = document.createElement('div');
-      div.textContent = text;
-      td.appendChild(div);
-    });
-    return td;
+  function el(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function button(className, text, onClick) {
+    var node = el('button', className, text);
+    node.type = 'button';
+    if (onClick) node.addEventListener('click', onClick);
+    return node;
+  }
+
+  function normalize(text) {
+    return String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   }
 
   function api(path, options) {
@@ -33,27 +50,156 @@
     });
   }
 
+  function jsonRequest(method, data) {
+    return { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
+  }
+
+  /* Session and navigation */
+
+  function showLogin(message) {
+    byId('tabs').hidden = true;
+    byId('stock-panel').hidden = true;
+    byId('panel').hidden = true;
+    byId('logout').hidden = true;
+    byId('login').hidden = false;
+    var error = byId('login-error');
+    error.hidden = !message;
+    error.textContent = message || '';
+    byId('username').focus();
+  }
+
+  function showApp() {
+    byId('login').hidden = true;
+    byId('tabs').hidden = false;
+    byId('logout').hidden = false;
+  }
+
   function showTab(name) {
     var stock = name === 'stock';
-    byId('tabs').hidden = false;
     byId('panel').hidden = stock;
     byId('stock-panel').hidden = !stock;
     byId('tab-orders').setAttribute('aria-pressed', String(!stock));
     byId('tab-stock').setAttribute('aria-pressed', String(stock));
-    if (stock) loadStock();
-    else loadOrders();
+    return stock ? loadProducts() : loadOrders();
   }
 
-  var COLOR_LIST = window.TRENO_COLORS;
-  var MAX_PHOTO_SIDE = 1000;
-  var MAX_SOURCE_BYTES = 25 * 1024 * 1024;
+  /* Orders */
 
-  function makeEl(tag, className, text) {
-    var node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
+  function statusSelect(order) {
+    var select = el('select', 'select');
+    select.setAttribute('aria-label', 'Estado del pedido ' + order.id);
+    STATUSES.forEach(function (status) {
+      var option = el('option', '', STATUS_NAMES[status]);
+      option.value = status;
+      select.appendChild(option);
+    });
+    select.value = order.status;
+    select.disabled = order.status === 'cancelado';
+    select.addEventListener('change', function () {
+      var next = select.value;
+      if (next === 'cancelado' && !window.confirm('¿Cancelar el pedido #' + order.id + '? Su stock se devolverá y no se podrá reabrir.')) {
+        select.value = order.status;
+        return;
+      }
+      byId('panel-error').hidden = true;
+      select.disabled = true;
+      api('/api/admin/orders/' + order.id, jsonRequest('PATCH', { status: next })).then(function () {
+        order.status = next;
+        renderOrders();
+      }).catch(function (error) {
+        if (error.status === 401) return showLogin('Tu sesión expiró.');
+        var box = byId('panel-error');
+        box.textContent = error.message;
+        box.hidden = false;
+        renderOrders();
+      });
+    });
+    return select;
   }
+
+  function orderCard(order) {
+    var card = el('article', 'order order--' + order.status);
+
+    var summary = el('div');
+    var heading = el('div', 'order__heading');
+    heading.appendChild(el('span', 'order__id', '#' + order.id));
+    heading.appendChild(el('span', 'order__muted', dateFormat.format(new Date(order.createdAt))));
+    summary.appendChild(heading);
+    summary.appendChild(el('div', 'order__total', money(order.total)));
+    card.appendChild(summary);
+
+    var customer = el('div');
+    customer.appendChild(el('div', 'order__label', 'Cliente'));
+    customer.appendChild(el('div', '', order.name));
+    var contact = el('div', 'order__contact');
+    var phone = el('a', '', order.phone);
+    phone.href = 'tel:' + order.phone.replace(/[^0-9+]/g, '');
+    contact.appendChild(phone);
+    var digits = order.phone.replace(/[^0-9]/g, '');
+    var whatsapp = el('a', '', 'WhatsApp');
+    whatsapp.href = 'https://wa.me/' + (digits.length === 9 ? '51' + digits : digits);
+    contact.appendChild(whatsapp);
+    customer.appendChild(contact);
+    customer.appendChild(el('div', 'order__address', order.address + ', ' + order.city));
+    card.appendChild(customer);
+
+    var items = el('div');
+    items.appendChild(el('div', 'order__label', 'Productos'));
+    var list = el('ul', 'order__items');
+    order.items.forEach(function (item) {
+      var colorName = COLOR_LIST[item.color] ? COLOR_LIST[item.color][0] : item.color;
+      list.appendChild(el('li', '', item.qty + ' × ' + item.name + ' (' + colorName + ')'));
+    });
+    items.appendChild(list);
+    if (order.notes) items.appendChild(el('div', 'order__note', 'Nota: ' + order.notes));
+    card.appendChild(items);
+
+    var status = el('div');
+    status.appendChild(el('div', 'order__label', 'Estado'));
+    status.appendChild(statusSelect(order));
+    card.appendChild(status);
+    return card;
+  }
+
+  function statButton(label, status, list) {
+    var total = list.reduce(function (sum, order) { return sum + order.total; }, 0);
+    var stat = button('stat', undefined, function () {
+      orderFilter = orderFilter === status ? '' : status;
+      renderOrders();
+    });
+    stat.setAttribute('aria-pressed', String(orderFilter === status));
+    stat.appendChild(el('span', 'stat__label', label));
+    stat.appendChild(el('span', 'stat__value', String(list.length)));
+    stat.appendChild(el('span', 'stat__amount', money(total)));
+    return stat;
+  }
+
+  function renderOrders() {
+    byId('stats').replaceChildren.apply(byId('stats'), STATUSES.map(function (status) {
+      return statButton(LABELS[status], status, orders.filter(function (o) { return o.status === status; }));
+    }));
+
+    var query = normalize(byId('order-search').value.trim());
+    var shown = orders.filter(function (order) {
+      if (orderFilter && order.status !== orderFilter) return false;
+      return !query || normalize(order.id + ' #' + order.id + ' ' + order.name + ' ' + order.phone).indexOf(query) >= 0;
+    });
+    byId('count').textContent = shown.length + (shown.length === 1 ? ' pedido' : ' pedidos');
+    byId('none').hidden = shown.length > 0;
+    byId('rows').replaceChildren.apply(byId('rows'), shown.map(orderCard));
+  }
+
+  function loadOrders() {
+    return api('/api/admin/orders').then(function (list) {
+      orders = list;
+      showApp();
+      renderOrders();
+    }).catch(function (error) {
+      showLogin(error.status === 401 ? '' : error.message);
+    });
+  }
+
+  /* Product photos */
 
   // Shrink in the browser so every upload stays small, whatever the camera produced.
   function toJpeg(file) {
@@ -81,27 +227,63 @@
   function builtInPhotos(product, slot) {
     var extras = (window.TRENO_EXTRA_IMAGES || {})[product.id] || [];
     var color = slot === 'principal' ? undefined : slot;
-    var main = color ? ((window.TRENO_COLOR_IMAGES || {})[product.id] || {})[color] : undefined;
+    var colorMap = (window.TRENO_COLOR_IMAGES || {})[product.id];
+    // Without per-color photos, the product's main photo is a general one.
+    var main = color ? (colorMap || {})[color] : (colorMap ? undefined : product.img);
     return (main ? [main] : []).concat(extras.filter(function (extra) { return extra.color === color; }).map(function (extra) {
       return extra.file;
     }));
   }
 
-  function photoThumb(src, alt) {
-    var thumb = makeEl('img', 'slot__thumb');
-    thumb.src = src;
-    thumb.alt = alt;
-    thumb.loading = 'lazy';
-    thumb.addEventListener('error', function () { thumb.replaceWith(makeEl('div', 'slot__empty', 'Sin foto')); });
-    return thumb;
+  function listPhotoOf(product) {
+    var slots = product.colors.concat('principal');
+    for (var i = 0; i < slots.length; i++) {
+      var uploaded = product.photos[slots[i]];
+      if (uploaded && uploaded.length) return uploaded[0].url;
+      var builtIn = builtInPhotos(product, slots[i]);
+      if (builtIn.length) return 'assets/img/' + builtIn[0];
+    }
+    return 'assets/img/' + product.img;
   }
 
-  function uploadFiles(product, slot, files, editor, status) {
+  function photoItem(src, alt, caption) {
+    var item = el('div', 'photo');
+    var image = el('img');
+    image.src = src;
+    image.alt = alt;
+    image.loading = 'lazy';
+    image.addEventListener('error', function () { image.replaceWith(el('div', 'photo__empty', 'Sin foto')); });
+    item.appendChild(image);
+    if (caption) item.appendChild(caption);
+    return item;
+  }
+
+  /* Product rows */
+
+  function setStatus(row, message, isError) {
+    var status = row.querySelector('.status');
+    status.textContent = message;
+    status.className = 'status' + (isError ? ' status--error' : '');
+  }
+
+  function handleError(error, row) {
+    if (error.status === 401) return showLogin('Tu sesión expiró.');
+    setStatus(row, error.message, true);
+  }
+
+  function refreshRow(product, row, message) {
+    var fresh = productRow(product);
+    row.replaceWith(fresh);
+    if (message) setStatus(fresh, message);
+    return fresh;
+  }
+
+  function uploadFiles(product, slot, files, row) {
     var list = Array.prototype.slice.call(files);
     var chain = Promise.resolve();
     list.forEach(function (file, index) {
       chain = chain.then(function () {
-        setStatus(status, 'Subiendo foto ' + (index + 1) + ' de ' + list.length + '…');
+        setStatus(row, 'Subiendo foto ' + (index + 1) + ' de ' + list.length + '…');
         return toJpeg(file);
       }).then(function (blob) {
         return api('/api/admin/products/' + product.id + '/photos/' + slot, {
@@ -114,349 +296,281 @@
       });
     });
     chain.then(function () {
-      replaceEditor(product, editor, list.length === 1 ? 'Foto guardada.' : 'Fotos guardadas.');
+      refreshRow(product, row, list.length === 1 ? 'Foto guardada.' : 'Fotos guardadas.');
     }).catch(function (error) {
       if (error.status === 401) return showLogin('Tu sesión expiró.');
       // Photos uploaded before the failure are saved; show them with the error.
-      var fresh = replaceEditor(product, editor);
-      handleEditorError(error, fresh.querySelector('.editor__status'));
+      handleError(error, refreshRow(product, row));
     });
   }
 
-  function saveColors(product, colors, editor, status, message) {
-    api('/api/admin/products/' + product.id + '/colors', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ colors: colors })
-    }).then(function (body) {
+  function saveColors(product, colors, row, message) {
+    api('/api/admin/products/' + product.id + '/colors', jsonRequest('PATCH', { colors: colors })).then(function (body) {
       product.colors = body.colors;
       product.photos = body.photos;
-      replaceEditor(product, editor, message);
-    }).catch(function (error) { handleEditorError(error, status); });
+      refreshRow(product, row, message);
+    }).catch(function (error) { handleError(error, row); });
   }
 
-  function photoGroup(product, slot, editor, status) {
+  function photoGroup(product, slot, row) {
     var isColor = slot !== 'principal';
-    var group = makeEl('section', 'photo-group');
-    var head = makeEl('div', 'photo-group__head');
+    var colorName = isColor ? COLOR_LIST[slot][0] : 'Fotos generales';
+    var group = el('section', 'photo-group');
+    var head = el('div', 'photo-group__head');
     if (isColor) {
-      var dot = makeEl('span', 'photo-group__dot');
+      var dot = el('span', 'dot');
       dot.style.backgroundColor = COLOR_LIST[slot][1];
       head.appendChild(dot);
     }
-    head.appendChild(makeEl('h3', 'photo-group__title', isColor ? COLOR_LIST[slot][0] : 'Fotos generales'));
+    head.appendChild(el('span', '', colorName));
     if (isColor) {
-      var removeColor = makeEl('button', 'slot__remove photo-group__delete', 'Eliminar color');
-      removeColor.type = 'button';
-      removeColor.setAttribute('aria-label', 'Eliminar color ' + COLOR_LIST[slot][0] + ' de ' + product.name);
-      removeColor.addEventListener('click', function () {
+      var remove = button('link link--danger', 'Eliminar color', function () {
         if (product.colors.length === 1) {
-          setStatus(status, 'El producto debe tener al menos un color.', true);
+          setStatus(row, 'El producto debe tener al menos un color.', true);
           return;
         }
-        if (!window.confirm('¿Eliminar el color ' + COLOR_LIST[slot][0] + ' de ' + product.name + '? También se borrarán las fotos que subiste para este color.')) return;
-        saveColors(product, product.colors.filter(function (color) { return color !== slot; }), editor, status, 'Color eliminado.');
+        if (!window.confirm('¿Eliminar el color ' + colorName + ' de ' + product.name + '? También se borrarán las fotos que subiste para este color.')) return;
+        saveColors(product, product.colors.filter(function (color) { return color !== slot; }), row, 'Color eliminado.');
       });
-      head.appendChild(removeColor);
+      remove.setAttribute('aria-label', 'Eliminar color ' + colorName + ' de ' + product.name);
+      head.appendChild(remove);
     }
     group.appendChild(head);
 
-    var grid = makeEl('div', 'slots');
+    var photos = el('div', 'photos');
     var uploaded = product.photos[slot] || [];
     uploaded.forEach(function (photo, index) {
-      var item = makeEl('div', 'slot');
-      item.appendChild(photoThumb(photo.url, 'Foto ' + (index + 1) + ' de ' + product.name));
-      var remove = makeEl('button', 'slot__remove', 'Quitar');
-      remove.type = 'button';
-      remove.setAttribute('aria-label', 'Quitar foto ' + (index + 1) + ' del grupo ' + slot + ' de ' + product.name);
-      remove.addEventListener('click', function () {
+      var removePhoto = button('link', 'Quitar', function () {
         if (!window.confirm('¿Quitar esta foto de ' + product.name + '?')) return;
         api('/api/admin/products/' + product.id + '/images/' + photo.id, { method: 'DELETE' }).then(function (body) {
           product.photos = body.photos;
-          replaceEditor(product, editor, 'Foto quitada.');
-        }).catch(function (error) { handleEditorError(error, status); });
+          refreshRow(product, row, 'Foto quitada.');
+        }).catch(function (error) { handleError(error, row); });
       });
-      item.appendChild(remove);
-      grid.appendChild(item);
+      removePhoto.setAttribute('aria-label', 'Quitar foto ' + (index + 1) + ' de ' + colorName);
+      photos.appendChild(photoItem(photo.url, 'Foto ' + (index + 1) + ' de ' + product.name, removePhoto));
     });
     if (!uploaded.length) {
       builtInPhotos(product, slot).forEach(function (file) {
-        var item = makeEl('div', 'slot');
-        item.appendChild(photoThumb('assets/img/' + file, 'Foto actual de ' + product.name));
-        item.appendChild(makeEl('span', 'slot__caption', 'Foto actual'));
-        grid.appendChild(item);
+        photos.appendChild(photoItem('assets/img/' + file, 'Foto actual de ' + product.name, el('span', 'photo__caption', 'Actual')));
       });
     }
 
-    var upload = makeEl('label', 'slot__button slot__add', 'Agregar fotos');
+    var upload = el('label', 'add-photo', '+ Agregar fotos');
     var input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
     input.accept = 'image/jpeg,image/png,image/webp';
-    input.setAttribute('aria-label', 'Agregar fotos al grupo ' + slot + ' de ' + product.name);
+    input.setAttribute('aria-label', 'Agregar fotos a ' + colorName + ' de ' + product.name);
     input.addEventListener('change', function () {
-      if (input.files.length) uploadFiles(product, slot, input.files, editor, status);
+      if (input.files.length) uploadFiles(product, slot, input.files, row);
     });
     upload.appendChild(input);
-    grid.appendChild(upload);
-    group.appendChild(grid);
+    photos.appendChild(upload);
+    group.appendChild(photos);
     return group;
   }
 
-  function colorAdder(product, editor, status) {
-    var row = makeEl('div', 'editor__row color-adder');
-    var label = makeEl('label', '', 'Agregar color');
-    var select = document.createElement('select');
-    select.className = 'color-select';
-    select.setAttribute('aria-label', 'Agregar color a ' + product.name);
+  function colorAdder(product, row) {
     var available = Object.keys(COLOR_LIST).filter(function (color) { return product.colors.indexOf(color) < 0; });
+    var adder = el('div', 'color-adder');
+    var label = el('label', 'field', 'Agregar color');
+    var select = el('select', 'select');
+    select.setAttribute('aria-label', 'Agregar color a ' + product.name);
     available.forEach(function (color) {
-      var option = document.createElement('option');
+      var option = el('option', '', COLOR_LIST[color][0]);
       option.value = color;
-      option.textContent = COLOR_LIST[color][0];
       select.appendChild(option);
     });
     label.appendChild(select);
-    row.appendChild(label);
-    var add = makeEl('button', 'stock-save', 'Agregar');
-    add.type = 'button';
+    adder.appendChild(label);
+    var add = button('btn', 'Agregar', function () {
+      saveColors(product, product.colors.concat(select.value), row, 'Color agregado.');
+    });
     add.disabled = !available.length;
     add.setAttribute('aria-label', 'Agregar el color elegido a ' + product.name);
-    add.addEventListener('click', function () {
-      saveColors(product, product.colors.concat(select.value), editor, status, 'Color agregado.');
-    });
-    row.appendChild(add);
-    return row;
+    adder.appendChild(add);
+    return adder;
   }
 
-  function setStatus(status, message, isError) {
-    status.textContent = message;
-    status.className = 'editor__status' + (isError ? ' editor__status--error' : '');
-  }
+  function productPanel(product, row) {
+    var panel = el('div', 'product__panel');
 
-  function handleEditorError(error, status) {
-    if (error.status === 401) return showLogin('Tu sesión expiró.');
-    setStatus(status, error.message, true);
-  }
-
-  function replaceEditor(product, editor, message) {
-    var fresh = productEditor(product);
-    editor.replaceWith(fresh);
-    if (message) setStatus(fresh.querySelector('.editor__status'), message);
-    return fresh;
-  }
-
-  function productEditor(product) {
-    var editor = makeEl('article', 'editor');
-    var title = makeEl('h2', '', product.name);
-    title.appendChild(makeEl('span', 'editor__meta', product.cat + ' · ' + money(product.price)));
-    if (product.stock <= 2) {
-      title.appendChild(makeEl('span', 'stock-low', product.stock === 0 ? 'Agotado' : 'Stock bajo'));
-    }
-    editor.appendChild(title);
-
-    var fields = makeEl('div', 'editor__fields');
-    var nameLabel = makeEl('label', '', 'Nombre');
-    var name = document.createElement('input');
+    var info = el('div');
+    info.appendChild(el('h3', 'panel__title', 'Información'));
+    var fields = el('div', 'panel__fields');
+    var nameLabel = el('label', 'field', 'Nombre');
+    var name = el('input', 'input');
     name.type = 'text';
     name.maxLength = 120;
     name.value = product.name;
     name.setAttribute('aria-label', 'Nombre de ' + product.name);
     nameLabel.appendChild(name);
     fields.appendChild(nameLabel);
-
-    var descriptionLabel = makeEl('label', '', 'Descripción');
-    var description = document.createElement('textarea');
-    description.rows = 3;
+    var descriptionLabel = el('label', 'field', 'Descripción');
+    var description = el('textarea', 'textarea');
+    description.rows = 5;
     description.maxLength = 500;
     description.value = product.description;
+    description.placeholder = 'Medidas, material y uso del producto';
     description.setAttribute('aria-label', 'Descripción de ' + product.name);
     descriptionLabel.appendChild(description);
     fields.appendChild(descriptionLabel);
-
-    var saveDetails = makeEl('button', 'stock-save', 'Guardar nombre y descripción');
-    saveDetails.type = 'button';
-    saveDetails.disabled = true;
+    var save = button('btn btn--primary', 'Guardar información', function () {
+      save.disabled = true;
+      api('/api/admin/products/' + product.id + '/details', jsonRequest('PATCH', {
+        name: name.value,
+        description: description.value
+      })).then(function (body) {
+        product.name = body.name;
+        product.description = body.description;
+        refreshRow(product, row, 'Información guardada.');
+      }).catch(function (error) {
+        save.disabled = false;
+        handleError(error, row);
+      });
+    });
+    save.disabled = true;
     function detailsChanged() {
-      saveDetails.disabled = name.value === product.name && description.value === product.description;
+      save.disabled = name.value === product.name && description.value === product.description;
     }
     name.addEventListener('input', detailsChanged);
     description.addEventListener('input', detailsChanged);
-    fields.appendChild(saveDetails);
+    fields.appendChild(save);
+    info.appendChild(fields);
+    panel.appendChild(info);
 
-    var stockRow = makeEl('div', 'editor__row');
-    var stockLabel = makeEl('label', '', 'Stock');
-    var stock = document.createElement('input');
+    var media = el('div');
+    media.appendChild(el('h3', 'panel__title', 'Colores y fotos'));
+    product.colors.concat('principal').forEach(function (slot) {
+      media.appendChild(photoGroup(product, slot, row));
+    });
+    media.appendChild(colorAdder(product, row));
+    panel.appendChild(media);
+    return panel;
+  }
+
+  function productRow(product) {
+    var row = el('article', 'product');
+    row.dataset.product = product.id;
+    var isOpen = !!openProducts[product.id];
+
+    var top = el('div', 'product__row');
+    var thumb = el('img', 'product__thumb');
+    thumb.src = listPhotoOf(product);
+    thumb.alt = '';
+    thumb.loading = 'lazy';
+    thumb.addEventListener('error', function () {
+      thumb.replaceWith(el('div', 'product__thumb product__thumb--empty', 'Sin foto'));
+    });
+    top.appendChild(thumb);
+
+    var info = el('div');
+    info.appendChild(el('div', 'product__name', product.name));
+    var meta = el('div', 'product__meta');
+    meta.appendChild(el('span', '', product.cat));
+    var dots = el('span', 'product__dots');
+    product.colors.forEach(function (color) {
+      var dot = el('span', 'dot');
+      dot.style.backgroundColor = COLOR_LIST[color][1];
+      dot.title = COLOR_LIST[color][0];
+      dots.appendChild(dot);
+    });
+    meta.appendChild(dots);
+    if (product.stock === 0) meta.appendChild(el('span', 'badge badge--out', 'Sin stock · oculto'));
+    else if (product.stock <= LOW_STOCK) meta.appendChild(el('span', 'badge badge--low', 'Stock bajo'));
+    info.appendChild(meta);
+    top.appendChild(info);
+
+    top.appendChild(el('div', 'product__price', money(product.price)));
+
+    var stockBox = el('div', 'product__stock');
+    var stock = el('input', 'input');
     stock.type = 'number';
     stock.min = '0';
     stock.max = '100000';
     stock.step = '1';
     stock.value = product.stock;
-    stock.className = 'stock-input';
     stock.setAttribute('aria-label', 'Stock de ' + product.name);
-    stockLabel.appendChild(stock);
-    stockRow.appendChild(stockLabel);
-    var saveStock = makeEl('button', 'stock-save', 'Guardar stock');
-    saveStock.type = 'button';
+    stockBox.appendChild(stock);
+    var saveStock = button('btn', 'Guardar', function () {
+      saveStock.disabled = true;
+      api('/api/admin/products/' + product.id, jsonRequest('PATCH', {
+        stock: Number(stock.value),
+        expected: product.stock
+      })).then(function (body) {
+        product.stock = body.stock;
+        refreshRow(product, row, 'Stock guardado.');
+      }).catch(function (error) {
+        saveStock.disabled = false;
+        handleError(error, row);
+      });
+    });
     saveStock.disabled = true;
+    saveStock.setAttribute('aria-label', 'Guardar stock de ' + product.name);
     stock.addEventListener('input', function () {
       saveStock.disabled = stock.value === String(product.stock);
     });
-    stockRow.appendChild(saveStock);
-    fields.appendChild(stockRow);
+    stockBox.appendChild(saveStock);
+    top.appendChild(stockBox);
 
-    var status = makeEl('p', 'editor__status');
+    var toggle = button('btn product__toggle', isOpen ? 'Cerrar' : 'Editar', function () {
+      openProducts[product.id] = !openProducts[product.id];
+      refreshRow(product, row);
+    });
+    toggle.setAttribute('aria-expanded', String(isOpen));
+    toggle.setAttribute('aria-label', (isOpen ? 'Cerrar ' : 'Editar ') + product.name);
+    top.appendChild(toggle);
+    row.appendChild(top);
+
+    var status = el('p', 'status');
     status.setAttribute('role', 'status');
-    fields.appendChild(status);
-    editor.appendChild(fields);
+    row.appendChild(status);
 
-    saveDetails.addEventListener('click', function () {
-      saveDetails.disabled = true;
-      api('/api/admin/products/' + product.id + '/details', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.value, description: description.value })
-      }).then(function (body) {
-        product.name = body.name;
-        product.description = body.description;
-        replaceEditor(product, editor, 'Nombre y descripción guardados.');
-      }).catch(function (error) {
-        detailsChanged();
-        handleEditorError(error, status);
-      });
-    });
-
-    saveStock.addEventListener('click', function () {
-      saveStock.disabled = true;
-      api('/api/admin/products/' + product.id, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stock: Number(stock.value), expected: product.stock })
-      }).then(function (body) {
-        product.stock = body.stock;
-        replaceEditor(product, editor, 'Stock guardado.');
-      }).catch(function (error) {
-        saveStock.disabled = false;
-        handleEditorError(error, status);
-      });
-    });
-
-    var slots = makeEl('div', 'photo-groups');
-    product.colors.concat('principal').forEach(function (slot) {
-      slots.appendChild(photoGroup(product, slot, editor, status));
-    });
-    slots.appendChild(colorAdder(product, editor, status));
-    editor.appendChild(slots);
-    return editor;
+    if (isOpen) row.appendChild(productPanel(product, row));
+    return row;
   }
 
-  function loadStock() {
-    return api('/api/admin/products').then(function (products) {
-      byId('stock-rows').replaceChildren.apply(byId('stock-rows'), products.map(productEditor));
+  function renderProducts() {
+    var query = normalize(byId('product-search').value.trim());
+    var filter = byId('product-filter').value;
+    var shown = products.filter(function (product) {
+      if (filter === 'out' && product.stock !== 0) return false;
+      if (filter === 'low' && (product.stock === 0 || product.stock > LOW_STOCK)) return false;
+      return !query || normalize(product.name + ' ' + product.cat).indexOf(query) >= 0;
+    });
+    byId('product-count').textContent = shown.length + (shown.length === 1 ? ' producto' : ' productos');
+    byId('products-none').hidden = shown.length > 0;
+    byId('stock-rows').hidden = shown.length === 0;
+    byId('stock-rows').replaceChildren.apply(byId('stock-rows'), shown.map(productRow));
+  }
+
+  function loadProducts() {
+    var box = byId('stock-error');
+    box.hidden = true;
+    return api('/api/admin/products').then(function (list) {
+      products = list;
+      renderProducts();
     }).catch(function (error) {
       if (error.status === 401) return showLogin('Tu sesión expiró.');
-      var box = byId('stock-error');
       box.textContent = error.message;
       box.hidden = false;
     });
   }
 
-  function showLogin(message) {
-    byId('tabs').hidden = true;
-    byId('stock-panel').hidden = true;
-    byId('panel').hidden = true;
-    byId('logout').hidden = true;
-    byId('login').hidden = false;
-    var error = byId('login-error');
-    error.hidden = !message;
-    error.textContent = message || '';
-    byId('username').focus();
-  }
-
-  function statusSelect(order) {
-    var select = document.createElement('select');
-    select.style.cssText = 'height: 44px; padding: 0 8px; border: 1px solid #8A8D91; background: #ffffff; font: inherit; font-size: 14px';
-    select.setAttribute('aria-label', 'Estado del pedido ' + order.id);
-    STATUSES.forEach(function (status) {
-      var option = document.createElement('option');
-      option.value = status;
-      option.textContent = LABELS[status];
-      select.appendChild(option);
-    });
-    select.value = order.status;
-    select.disabled = order.status === 'cancelado';
-    select.addEventListener('change', function () {
-      var next = select.value;
-      if (next === 'cancelado' && !window.confirm('¿Cancelar el pedido #' + order.id + '? Su stock se devolverá y no se podrá reabrir.')) {
-        select.value = order.status;
-        return;
-      }
-      byId('panel-error').hidden = true;
-      select.disabled = true;
-      api('/api/admin/orders/' + order.id, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: next })
-      }).then(function () {
-        order.status = next;
-        render();
-      }).catch(function (error) {
-        if (error.status === 401) return showLogin('Tu sesión expiró.');
-        var box = byId('panel-error');
-        box.textContent = error.message;
-        box.hidden = false;
-        render();
-      });
-    });
-    return select;
-  }
-
-  function render() {
-    var filter = byId('filter').value;
-    var shown = orders.filter(function (o) { return !filter || o.status === filter; });
-    byId('count').textContent = '[' + shown.length + ']';
-    byId('none').hidden = shown.length > 0;
-
-    byId('rows').replaceChildren.apply(byId('rows'), shown.map(function (order) {
-      var row = document.createElement('tr');
-      row.appendChild(cell(['#' + order.id]));
-      row.appendChild(cell([dateFormat.format(new Date(order.createdAt))]));
-      row.appendChild(cell([order.name, order.phone]));
-      row.appendChild(cell(order.notes ? [order.address, order.city, 'Nota: ' + order.notes] : [order.address, order.city]));
-      row.appendChild(cell(order.items.map(function (item) {
-        return item.qty + ' × ' + item.name + ' (' + item.color + ') · ' + money(item.price);
-      })));
-      row.appendChild(cell([money(order.total)]));
-      var status = document.createElement('td');
-      status.appendChild(statusSelect(order));
-      row.appendChild(status);
-      return row;
-    }));
-  }
-
-  function loadOrders() {
-    return api('/api/admin/orders').then(function (list) {
-      orders = list;
-      byId('login').hidden = true;
-      byId('tabs').hidden = false;
-      byId('panel').hidden = byId('tab-stock').getAttribute('aria-pressed') === 'true';
-      byId('logout').hidden = false;
-      render();
-    }).catch(function (error) {
-      showLogin(error.status === 401 ? '' : error.message);
-    });
-  }
+  /* Events */
 
   byId('login').addEventListener('submit', function (event) {
     event.preventDefault();
     var password = byId('password');
-    api('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: byId('username').value, password: password.value })
-    }).then(function () {
+    api('/api/admin/login', jsonRequest('POST', {
+      username: byId('username').value,
+      password: password.value
+    })).then(function () {
       password.value = '';
       return loadOrders();
+    }).then(function () {
+      if (byId('login').hidden) showTab('orders');
     }).catch(function (error) {
       showLogin(error.message);
     });
@@ -465,13 +579,20 @@
   byId('logout').addEventListener('click', function () {
     api('/api/admin/logout', { method: 'POST' }).then(function () {
       orders = [];
+      products = [];
       byId('rows').replaceChildren();
+      byId('stock-rows').replaceChildren();
       showLogin('');
     });
   });
 
-  byId('filter').addEventListener('change', render);
+  byId('order-search').addEventListener('input', renderOrders);
+  byId('product-search').addEventListener('input', renderProducts);
+  byId('product-filter').addEventListener('change', renderProducts);
   byId('tab-orders').addEventListener('click', function () { showTab('orders'); });
   byId('tab-stock').addEventListener('click', function () { showTab('stock'); });
-  loadOrders();
+
+  loadOrders().then(function () {
+    if (byId('login').hidden) byId('panel').hidden = false;
+  });
 })();

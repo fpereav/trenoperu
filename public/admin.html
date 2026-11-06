@@ -4,109 +4,65 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>TRENO — Compras</title>
+<title>TRENO — Administración</title>
 <link rel="icon" type="image/png" href="assets/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-<style>
-body{margin:0;background:#ffffff}
-[hidden]{display:none !important}
-th,td{padding:12px;text-align:left;vertical-align:top;border-bottom:1px solid #E6E6E6}
-th{font-size:12px;text-transform:uppercase;letter-spacing:0.05em;color:#555555;white-space:nowrap}
-td ul{margin:0;padding:0;list-style:none}
-.tab{min-height:44px;padding:0 20px;border:1px solid #CCCCCC;border-radius:22px;background:#ffffff;font:inherit;font-size:13px;font-weight:700;text-transform:uppercase;cursor:pointer}
-.tab[aria-pressed="true"]{border-color:#111111;background:#111111;color:#ffffff}
-.editor{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 32px;padding:24px 0;border-bottom:1px solid #E6E6E6}
-.editor h2{grid-column:1/-1;margin:0;font-size:16px;font-weight:700}
-.editor__meta{margin-left:8px;color:#555555;font-size:13px;font-weight:400}
-.editor__fields{display:flex;flex-direction:column;gap:10px;min-width:0}
-.editor label{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600}
-.editor input[type=text],.editor textarea{width:100%;min-height:44px;padding:10px 12px;border:1px solid #8A8D91;font:inherit;font-size:14px;font-weight:400}
-.editor textarea{resize:vertical}
-.editor__row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
-.editor__status{min-height:20px;margin:0;color:#555555;font-size:13px}
-.editor__status--error{color:#B3123F}
-.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px;align-content:start}
-.slot{display:flex;flex-direction:column;gap:4px;font-size:12px;text-align:center}
-.slot__name{font-weight:600;text-transform:capitalize}
-.slot__thumb{display:block;width:100%;aspect-ratio:1/1;border:1px solid #E6E6E6;object-fit:contain;background:#F2F2F2}
-.slot__empty{display:grid;place-items:center;width:100%;aspect-ratio:1/1;border:1px solid #E6E6E6;background:#F2F2F2;color:#555555}
-.slot__button{display:flex;align-items:center;justify-content:center;min-height:36px;border:1px solid #111111;background:#ffffff;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
-.slot__button:focus-within{outline:2px solid #111111;outline-offset:2px}
-.slot__button input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.photo-groups{display:flex;flex-direction:column;gap:16px;min-width:0}
-.photo-group{padding-bottom:12px;border-bottom:1px solid #F0F0F0}
-.photo-group__head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.photo-group__title{margin:0;font-size:14px;font-weight:700}
-.photo-group__dot{flex:none;width:14px;height:14px;border:1px solid #BDBDBD;border-radius:50%}
-.photo-group__delete{margin-left:auto;color:#B3123F}
-.slot__caption{color:#555555}
-.slot__add{align-self:start;min-height:44px;padding:0 8px}
-.color-select{height:44px;padding:0 8px;border:1px solid #8A8D91;background:#ffffff;font:inherit;font-size:14px;font-weight:400}
-.slot__remove{min-height:32px;border:0;background:transparent;font:inherit;font-size:12px;text-decoration:underline;cursor:pointer}
-@media (max-width:760px){.editor{grid-template-columns:minmax(0,1fr)}}
-.stock-input{width:96px;height:44px;padding:0 10px;border:1px solid #8A8D91;font:inherit;font-size:14px}
-.stock-save{min-height:44px;padding:0 16px;border:1px solid #111111;background:#ffffff;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
-.stock-save:disabled{border-color:#E6E6E6;color:#777777;cursor:default}
-.stock-low{display:inline-block;margin-left:8px;padding:1px 6px;background:#FFE4EB;color:#B3123F;font-size:12px;font-weight:600}
-</style>
+<link rel="stylesheet" href="admin.css">
 </head>
 <body>
-<div style="font-family: Inter, system-ui, sans-serif; color: #111111; min-height: 100vh">
-  <header style="border-bottom: 1px solid #E6E6E6">
-    <div style="max-width: 1440px; margin: 0 auto; padding: 0 32px; display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 72px">
-      <div style="font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 34px; letter-spacing: 0.06em"><img src="assets/img/logo-treno.png" alt="TRENO" width="404" height="144" style="display: inline-block; width: auto; height: 40px; vertical-align: middle"> <span style="font-size: 18px; letter-spacing: 0.02em; vertical-align: middle">ADMIN</span></div>
-      <button id="logout" type="button" hidden style="min-height: 44px; border: 0; background: transparent; font: inherit; font-size: 14px; text-decoration: underline; cursor: pointer; color: #111111">Cerrar sesión</button>
+  <header class="topbar">
+    <div class="topbar__row">
+      <div class="brand"><img src="assets/img/logo-treno.png" alt="TRENO" width="404" height="144"><span>ADMIN</span></div>
+      <nav id="tabs" class="tabs" aria-label="Secciones" hidden>
+        <button id="tab-orders" class="tab" type="button" aria-pressed="true">Pedidos</button>
+        <button id="tab-stock" class="tab" type="button" aria-pressed="false">Productos</button>
+      </nav>
+      <div class="topbar__end"><button id="logout" class="link" type="button" hidden>Cerrar sesión</button></div>
     </div>
   </header>
 
-  <main style="max-width: 1440px; margin: 0 auto; padding: 24px 32px 64px">
-    <form id="login" hidden style="max-width: 360px; margin: 48px auto; display: flex; flex-direction: column; gap: 12px">
-      <h1 style="margin: 0 0 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 36px; text-transform: uppercase">Iniciar sesión</h1>
-      <label for="username" style="font-size: 13px; font-weight: 600">Usuario</label>
-      <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px">
-      <label for="password" style="font-size: 13px; font-weight: 600">Contraseña</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" required style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px">
-      <p id="login-error" role="alert" hidden style="margin: 0; font-size: 14px; color: #B3123F"></p>
-      <button type="submit" style="min-height: 44px; border: 0; background: #111111; color: #ffffff; font: inherit; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; cursor: pointer">Entrar</button>
+  <main class="main">
+    <form id="login" class="login" hidden>
+      <h1 class="page-title">Iniciar sesión</h1>
+      <label class="field">Usuario<input id="username" class="input" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>
+      <label class="field">Contraseña<input id="password" class="input" name="password" type="password" autocomplete="current-password" required></label>
+      <p id="login-error" class="notice" role="alert" hidden></p>
+      <button class="btn btn--primary" type="submit">Entrar</button>
     </form>
 
-    <nav id="tabs" hidden aria-label="Secciones" style="display: flex; gap: 8px; margin-bottom: 24px">
-      <button id="tab-orders" type="button" aria-pressed="true" class="tab">Compras</button>
-      <button id="tab-stock" type="button" aria-pressed="false" class="tab">Productos y stock</button>
-    </nav>
+    <section id="panel" hidden>
+      <h1 class="page-title">Pedidos</h1>
+      <div id="stats" class="stats" role="group" aria-label="Filtrar por estado"></div>
+      <div class="toolbar">
+        <label class="visually-hidden" for="order-search">Buscar pedido</label>
+        <input id="order-search" class="input" type="search" placeholder="Buscar por nombre, teléfono o número de pedido">
+        <span id="count" class="toolbar__count"></span>
+      </div>
+      <p id="panel-error" class="notice" role="alert" hidden></p>
+      <p id="none" class="empty" hidden>No hay pedidos con estos filtros.</p>
+      <div id="rows" class="orders"></div>
+    </section>
 
     <section id="stock-panel" hidden>
-      <h1 style="margin: 0 0 16px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 40px; text-transform: uppercase">Productos</h1>
-      <p id="stock-error" role="alert" hidden style="font-size: 14px; color: #B3123F"></p>
-      <div id="stock-rows"></div>
-    </section>
-
-    <section id="panel" hidden>
-      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px">
-        <h1 style="margin: 0; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 40px; text-transform: uppercase">Compras <span id="count" style="font-family: Inter, system-ui, sans-serif; font-size: 15px; font-weight: 400; color: #555555"></span></h1>
-        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600">Estado
-          <select id="filter" style="height: 44px; padding: 0 8px; border: 1px solid #8A8D91; background: #ffffff; font: inherit; font-size: 14px">
-            <option value="">Todos</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="pagado">Pagado</option>
-            <option value="entregado">Entregado</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-        </label>
+      <h1 class="page-title">Productos</h1>
+      <div class="toolbar">
+        <label class="visually-hidden" for="product-search">Buscar producto</label>
+        <input id="product-search" class="input" type="search" placeholder="Buscar producto">
+        <label class="visually-hidden" for="product-filter">Filtrar productos</label>
+        <select id="product-filter" class="select">
+          <option value="">Todos</option>
+          <option value="low">Stock bajo</option>
+          <option value="out">Sin stock (ocultos)</option>
+        </select>
+        <span id="product-count" class="toolbar__count"></span>
       </div>
-      <p id="panel-error" role="alert" hidden style="font-size: 14px; color: #B3123F"></p>
-      <p id="none" hidden style="padding: 48px 0; font-size: 15px; color: #444444">Todavía no hay compras con este estado.</p>
-      <div style="overflow-x: auto">
-        <table style="width: 100%; min-width: 960px; border-collapse: collapse; font-size: 14px; line-height: 1.4">
-          <thead><tr><th>Pedido</th><th>Fecha</th><th>Cliente</th><th>Entrega</th><th>Productos</th><th>Total</th><th>Estado</th></tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
+      <p id="stock-error" class="notice" role="alert" hidden></p>
+      <p id="products-none" class="empty" hidden>No hay productos con estos filtros.</p>
+      <div id="stock-rows" class="products"></div>
     </section>
   </main>
-</div>
-<script src="photos.js"></script>
-<script src="admin.js"></script>
+  <script src="photos.js"></script>
+  <script src="admin.js"></script>
 </body>
 </html>
