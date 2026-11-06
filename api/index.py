@@ -5,6 +5,7 @@ import html
 import json
 import os
 import re
+import secrets
 import ssl
 import sys
 import time
@@ -33,6 +34,8 @@ COOKIE = "treno_admin"
 LOCAL_HOSTS = ("127.0.0.1", "localhost")
 STATUSES = ("pendiente", "pagado", "entregado", "cancelado")
 PHONE_RE = re.compile(r"^[0-9+() \-]{7,20}$")
+MAX_PRICE_CENTS = 10_000_000
+PRODUCT_CATEGORY_MAX = 40
 PRODUCT_NAME_MAX = 120
 PRODUCT_DESCRIPTION_MAX = 500
 FIELD_LIMITS = {"name": 120, "phone": 20, "address": 240, "city": 80, "notes": 500}
@@ -297,7 +300,7 @@ def admin_products():
     ]
 
 
-def set_product_details(product_id, payload):
+def clean_product_text(payload):
     name, description = payload.get("name"), payload.get("description")
     if not isinstance(name, str) or not isinstance(description, str):
         raise ApiError(400, "Revisa el nombre y la descripción.")
@@ -308,19 +311,93 @@ def set_product_details(product_id, payload):
         raise ApiError(400, f"El nombre admite hasta {PRODUCT_NAME_MAX} caracteres.")
     if len(description) > PRODUCT_DESCRIPTION_MAX:
         raise ApiError(400, f"La descripción admite hasta {PRODUCT_DESCRIPTION_MAX} caracteres.")
+    return name, description
+
+
+def clean_category(value):
+    category = value.strip() if isinstance(value, str) else ""
+    if not category or len(category) > PRODUCT_CATEGORY_MAX:
+        raise ApiError(400, f"Escribe una categoría de hasta {PRODUCT_CATEGORY_MAX} caracteres.")
+    return category
+
+
+def clean_price_cents(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ApiError(400, "Escribe un precio válido.")
+    cents = round(value * 100)
+    if not 1 <= cents <= MAX_PRICE_CENTS:
+        raise ApiError(400, "Escribe un precio mayor que 0 y hasta S/ 100000.")
+    return cents
+
+
+def clean_colors(colors):
+    if not isinstance(colors, list) or not all(isinstance(c, str) for c in colors):
+        raise ApiError(400, "Revisa los colores.")
+    if not colors:
+        raise ApiError(400, "El producto debe tener al menos un color.")
+    if len(set(colors)) != len(colors) or any(c not in COLOR_KEYS for c in colors):
+        raise ApiError(400, "Revisa los colores.")
+    return colors
+
+
+def clean_stock(value):
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= MAX_STOCK:
+        raise ApiError(400, "Escribe una cantidad entera entre 0 y 100000.")
+    return value
+
+
+def create_product(payload):
+    name, description = clean_product_text(payload)
+    category = clean_category(payload.get("category"))
+    price_cents = clean_price_cents(payload.get("price"))
+    stock = clean_stock(payload.get("stock"))
+    colors = clean_colors(payload.get("colors"))
+    product_id = "P" + secrets.token_hex(5).upper()
     conn = connect()
     try:
-        updated = conn.run(
-            "UPDATE products SET name = :name, description = :description WHERE id = :id RETURNING id",
+        rows_found = rows(
+            conn,
+            "INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, sort_order) "
+            "SELECT :id, :name, :description, :category, :price, '', CAST(:colors AS jsonb), :stock, "
+            "coalesce(max(sort_order), 0) + 1 FROM products "
+            "RETURNING id, name, description, category, price_cents, stock, image, colors",
+            id=product_id,
             name=name,
             description=description,
+            category=category,
+            price=price_cents,
+            colors=json.dumps(colors),
+            stock=stock,
+        )
+    finally:
+        conn.close()
+    p = rows_found[0]
+    return {"id": p["id"], "name": p["name"], "description": p["description"], "cat": p["category"],
+            "price": p["price_cents"] / 100, "stock": p["stock"], "img": p["image"],
+            "colors": p["colors"], "photos": {}}
+
+
+def set_product_details(product_id, payload):
+    name, description = clean_product_text(payload)
+    conn = connect()
+    try:
+        found = rows(conn, "SELECT category, price_cents FROM products WHERE id = :id", id=product_id)
+        if not found:
+            raise ApiError(404, "Producto no encontrado.")
+        category = clean_category(payload["category"]) if "category" in payload else found[0]["category"]
+        price_cents = clean_price_cents(payload["price"]) if "price" in payload else found[0]["price_cents"]
+        conn.run(
+            "UPDATE products SET name = :name, description = :description, category = :category, "
+            "price_cents = :price WHERE id = :id",
+            name=name,
+            description=description,
+            category=category,
+            price=price_cents,
             id=product_id,
         )
     finally:
         conn.close()
-    if not updated:
-        raise ApiError(404, "Producto no encontrado.")
-    return {"id": product_id, "name": name, "description": description}
+    return {"id": product_id, "name": name, "description": description, "cat": category, "price": price_cents / 100}
 
 
 def product_colors(conn, product_id):
@@ -335,13 +412,7 @@ def photos_of(conn, product_id):
 
 
 def set_product_colors(product_id, payload):
-    colors = payload.get("colors")
-    if not isinstance(colors, list) or not all(isinstance(c, str) for c in colors):
-        raise ApiError(400, "Revisa los colores.")
-    if not colors:
-        raise ApiError(400, "El producto debe tener al menos un color.")
-    if len(set(colors)) != len(colors) or any(c not in COLOR_KEYS for c in colors):
-        raise ApiError(400, "Revisa los colores.")
+    colors = clean_colors(payload.get("colors"))
     conn = connect()
     try:
         conn.run("START TRANSACTION")
@@ -422,10 +493,7 @@ def read_product_photo(image_id):
 
 
 def set_product_stock(product_id, payload):
-    stock, expected = payload.get("stock"), payload.get("expected")
-    for value in (stock, expected):
-        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= MAX_STOCK:
-            raise ApiError(400, "Escribe una cantidad entera entre 0 y 100000.")
+    stock, expected = clean_stock(payload.get("stock")), clean_stock(payload.get("expected"))
     conn = connect()
     try:
         # Only update if unchanged, so a sale made meanwhile is never overwritten.
@@ -463,7 +531,7 @@ def product_for_page(product_id):
     for slot in [MAIN_SLOT] + list(product["colors"]):
         if photos.get(slot):
             return product, SITE_URL + photos[slot][0]["url"]
-    if product["image"] in IMAGES_WITHOUT_FILE:
+    if not product["image"] or product["image"] in IMAGES_WITHOUT_FILE:
         return product, None
     return product, f"{SITE_URL}/assets/img/{product['image']}"
 
@@ -694,6 +762,9 @@ class handler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/admin/products":
             self.require_admin()
             return self.send_json(200, admin_products())
+        if method == "POST" and path == "/api/admin/products":
+            self.require_admin()
+            return self.send_json(201, create_product(self.read_json()))
         product = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})", path)
         if method == "PATCH" and product:
             self.require_admin()

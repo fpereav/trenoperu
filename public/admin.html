@@ -56,7 +56,28 @@
           <option value="out">Sin stock (ocultos)</option>
         </select>
         <span id="product-count" class="toolbar__count"></span>
+        <button id="new-product" class="btn btn--primary toolbar__end" type="button">+ Nuevo producto</button>
       </div>
+      <form id="new-form" class="new-form" hidden>
+        <h2 class="panel__title">Nuevo producto</h2>
+        <div class="new-form__grid">
+          <label class="field new-form__wide">Nombre<input id="new-name" class="input" type="text" maxlength="120" required></label>
+          <label class="field">Categoría<select id="new-category" class="select"></select></label>
+          <label id="new-category-other" class="field" hidden>Nueva categoría<input id="new-category-name" class="input" type="text" maxlength="40"></label>
+          <label class="field">Precio (S/)<input id="new-price" class="input" type="number" min="0.01" max="100000" step="0.01" required></label>
+          <label class="field">Stock<input id="new-stock" class="input" type="number" min="0" max="100000" step="1" required></label>
+          <label class="field new-form__wide">Descripción (opcional)<textarea id="new-description" class="textarea" rows="3" maxlength="500" placeholder="Medidas, material y uso del producto"></textarea></label>
+          <fieldset class="new-form__colors new-form__wide">
+            <legend>Colores</legend>
+            <div id="new-colors" class="color-choices"></div>
+          </fieldset>
+        </div>
+        <p id="new-error" class="notice" role="alert" hidden></p>
+        <div class="new-form__actions">
+          <button id="new-submit" class="btn btn--primary" type="submit">Crear producto</button>
+          <button id="new-cancel" class="btn" type="button">Cancelar</button>
+        </div>
+      </form>
       <p id="stock-error" class="notice" role="alert" hidden></p>
       <p id="products-none" class="empty" hidden>No hay productos con estos filtros.</p>
       <div id="stock-rows" class="products"></div>

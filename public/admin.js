@@ -273,7 +273,9 @@
 
   function refreshRow(product, row, message) {
     var fresh = productRow(product);
-    row.replaceWith(fresh);
+    // Another save may have redrawn this row while an upload was running.
+    var current = document.querySelector('.product[data-product="' + product.id + '"]') || row;
+    current.replaceWith(fresh);
     if (message) setStatus(fresh, message);
     return fresh;
   }
@@ -407,6 +409,24 @@
     name.setAttribute('aria-label', 'Nombre de ' + product.name);
     nameLabel.appendChild(name);
     fields.appendChild(nameLabel);
+    var priceLabel = el('label', 'field', 'Precio (S/)');
+    var price = el('input', 'input');
+    price.type = 'number';
+    price.min = '0.01';
+    price.max = '100000';
+    price.step = '0.01';
+    price.value = product.price.toFixed(2);
+    price.setAttribute('aria-label', 'Precio de ' + product.name);
+    priceLabel.appendChild(price);
+    fields.appendChild(priceLabel);
+    var categoryLabel = el('label', 'field', 'Categoría');
+    var category = el('input', 'input');
+    category.type = 'text';
+    category.maxLength = 40;
+    category.value = product.cat;
+    category.setAttribute('aria-label', 'Categoría de ' + product.name);
+    categoryLabel.appendChild(category);
+    fields.appendChild(categoryLabel);
     var descriptionLabel = el('label', 'field', 'Descripción');
     var description = el('textarea', 'textarea');
     description.rows = 5;
@@ -420,10 +440,14 @@
       save.disabled = true;
       api('/api/admin/products/' + product.id + '/details', jsonRequest('PATCH', {
         name: name.value,
-        description: description.value
+        description: description.value,
+        category: category.value,
+        price: Number(price.value)
       })).then(function (body) {
         product.name = body.name;
         product.description = body.description;
+        product.cat = body.cat;
+        product.price = body.price;
         refreshRow(product, row, 'Información guardada.');
       }).catch(function (error) {
         save.disabled = false;
@@ -432,8 +456,11 @@
     });
     save.disabled = true;
     function detailsChanged() {
-      save.disabled = name.value === product.name && description.value === product.description;
+      save.disabled = name.value === product.name && description.value === product.description &&
+        category.value === product.cat && Number(price.value) === product.price;
     }
+    price.addEventListener('input', detailsChanged);
+    category.addEventListener('input', detailsChanged);
     name.addEventListener('input', detailsChanged);
     description.addEventListener('input', detailsChanged);
     fields.appendChild(save);
@@ -558,6 +585,99 @@
     });
   }
 
+  /* New product */
+
+  var NEW_CATEGORY = '__nueva__';
+
+  function openNewForm() {
+    var form = byId('new-form');
+    form.reset();
+    byId('new-error').hidden = true;
+
+    var names = [];
+    products.forEach(function (p) { if (names.indexOf(p.cat) < 0) names.push(p.cat); });
+    var select = byId('new-category');
+    select.replaceChildren.apply(select, names.sort().map(function (name) {
+      var option = el('option', '', name);
+      option.value = name;
+      return option;
+    }).concat([(function () {
+      var option = el('option', '', 'Nueva categoría…');
+      option.value = NEW_CATEGORY;
+      return option;
+    })()]));
+    syncNewCategory();
+
+    byId('new-colors').replaceChildren.apply(byId('new-colors'), Object.keys(COLOR_LIST).map(function (color) {
+      var choice = el('label', 'color-choice');
+      var box = el('input');
+      box.type = 'checkbox';
+      box.value = color;
+      choice.appendChild(box);
+      var dot = el('span', 'dot');
+      dot.style.backgroundColor = COLOR_LIST[color][1];
+      choice.appendChild(dot);
+      choice.appendChild(document.createTextNode(COLOR_LIST[color][0]));
+      return choice;
+    }));
+
+    form.hidden = false;
+    byId('new-product').hidden = true;
+    byId('new-name').focus();
+  }
+
+  function closeNewForm() {
+    byId('new-form').hidden = true;
+    byId('new-product').hidden = false;
+  }
+
+  function syncNewCategory() {
+    var isNew = byId('new-category').value === NEW_CATEGORY;
+    byId('new-category-other').hidden = !isNew;
+    byId('new-category-name').required = isNew;
+  }
+
+  function submitNewProduct(event) {
+    event.preventDefault();
+    var errorBox = byId('new-error');
+    errorBox.hidden = true;
+    var colors = Array.prototype.map.call(byId('new-colors').querySelectorAll('input:checked'), function (box) {
+      return box.value;
+    });
+    if (!colors.length) {
+      errorBox.textContent = 'Elige al menos un color.';
+      errorBox.hidden = false;
+      return;
+    }
+    var select = byId('new-category');
+    var submit = byId('new-submit');
+    submit.disabled = true;
+    api('/api/admin/products', jsonRequest('POST', {
+      name: byId('new-name').value,
+      description: byId('new-description').value,
+      category: select.value === NEW_CATEGORY ? byId('new-category-name').value : select.value,
+      price: Number(byId('new-price').value),
+      stock: Number(byId('new-stock').value),
+      colors: colors
+    })).then(function (product) {
+      closeNewForm();
+      products.push(product);
+      openProducts[product.id] = true;
+      byId('product-search').value = '';
+      byId('product-filter').value = '';
+      renderProducts();
+      var row = document.querySelector('.product[data-product="' + product.id + '"]');
+      setStatus(row, 'Producto creado. Ahora agrega sus fotos.');
+      row.scrollIntoView({ block: 'center' });
+    }).catch(function (error) {
+      if (error.status === 401) return showLogin('Tu sesión expiró.');
+      errorBox.textContent = error.message;
+      errorBox.hidden = false;
+    }).finally(function () {
+      submit.disabled = false;
+    });
+  }
+
   /* Events */
 
   byId('login').addEventListener('submit', function (event) {
@@ -586,6 +706,10 @@
     });
   });
 
+  byId('new-product').addEventListener('click', openNewForm);
+  byId('new-cancel').addEventListener('click', closeNewForm);
+  byId('new-category').addEventListener('change', syncNewCategory);
+  byId('new-form').addEventListener('submit', submitNewProduct);
   byId('order-search').addEventListener('input', renderOrders);
   byId('product-search').addEventListener('input', renderProducts);
   byId('product-filter').addEventListener('change', renderProducts);

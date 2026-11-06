@@ -104,6 +104,18 @@
     setState({ cart: cart });
   }
 
+  // Not every product has a photo yet: a missing file shows the "Foto próximamente" tile.
+  function missingPhoto(p) { return IMG + (p.img || 'sin-foto.jpg'); }
+
+  // Fallback when the chosen color has no photo: show another color's, with a note.
+  function fallbackPhoto(p) {
+    for (var i = 0; i < p.colors.length; i++) {
+      var photos = colorPhotos(p, p.colors[i]);
+      if (photos.length) return photos[0];
+    }
+    return missingPhoto(p);
+  }
+
   function urlsOf(photos) {
     return (photos || []).map(function (photo) { return photo.url; });
   }
@@ -124,7 +136,8 @@
       return IMG + extra.file;
     });
     // Without per-color photos, the product's main photo applies to every color.
-    return COLOR_IMAGES[p.id] ? extras : [IMG + p.img].concat(extras);
+    // Products created in the admin have no built-in photo at all.
+    return COLOR_IMAGES[p.id] || !p.img ? extras : [IMG + p.img].concat(extras);
   }
 
   function hasColorPhotos(p) {
@@ -153,7 +166,7 @@
     var img = el('img');
     var color = pickedColor(p);
     var ownPhotos = colorPhotos(p, color);
-    img.src = ownPhotos[0] || generalPhotos(p)[0] || IMG + p.img;
+    img.src = ownPhotos[0] || generalPhotos(p)[0] || (p.img ? missingPhoto(p) : fallbackPhoto(p));
     img.alt = p.name;
     img.loading = 'lazy';
     img.addEventListener('error', function () {
@@ -182,6 +195,7 @@
   function productCard(p) {
     var color = pickedColor(p);
     var card = el('article', 'card');
+    card.dataset.product = p.id;
     card.appendChild(productTile(p));
     var title = el('h3', 'card__name');
     var titleLink = el('a', '', p.name);
@@ -231,7 +245,7 @@
 
     var color = pickedColor(p);
     var gallery = galleryOf(p, color);
-    var mainSrc = gallery.indexOf(state.detailPhoto) >= 0 ? state.detailPhoto : gallery[0] || IMG + p.img;
+    var mainSrc = gallery.indexOf(state.detailPhoto) >= 0 ? state.detailPhoto : gallery[0] || (p.img ? missingPhoto(p) : fallbackPhoto(p));
 
     var main = byId('product-image');
     main.alt = p.name;
@@ -315,7 +329,11 @@
 
   function renderFilters() {
     // Only categories with something on sale.
-    fill(byId('cats'), CATEGORIES.filter(function (name) {
+    var added = [];
+    products.forEach(function (p) {
+      if (CATEGORIES.indexOf(p.cat) < 0 && added.indexOf(p.cat) < 0) added.push(p.cat);
+    });
+    fill(byId('cats'), CATEGORIES.concat(added).filter(function (name) {
       return name === 'Todo' || name === state.cat || !state.loaded ||
         products.some(function (p) { return p.cat === name; });
     }).map(function (name) {
@@ -531,10 +549,14 @@
     window.addEventListener('hashchange', syncDetailWithHash);
     // Links are real pages for search engines; here they open the product in place.
     byId('grid').addEventListener('click', function (event) {
+      if (event.target.closest('button')) return;
       var link = event.target.closest('a[data-product]');
-      if (!link || event.metaKey || event.ctrlKey || event.shiftKey) return;
+      // Modified clicks on a link keep opening the product page in a new tab.
+      if (link && (event.metaKey || event.ctrlKey || event.shiftKey)) return;
+      var card = event.target.closest('.card');
+      if (!card) return;
       event.preventDefault();
-      location.hash = '#producto/' + link.dataset.product;
+      location.hash = '#producto/' + card.dataset.product;
     });
     byId('product-close').addEventListener('click', closeDetail);
     // Covers Esc. The event can arrive late, so ignore it if another product opened meanwhile.
