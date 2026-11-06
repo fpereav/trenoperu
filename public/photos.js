@@ -6,6 +6,7 @@ window.TRENO_COLOR_IMAGES = {
   MATGOM: { rosado: 'mat-goma-eva.jpg', fucsia: 'mat-goma-eva-fucsia.jpg', verde: 'mat-goma-eva-verde.jpg' },
   TOBPLA: { rosado: 'tobillera-peso.jpg', negro: 'tobillera-peso-negro.jpg', azul: 'tobillera-peso-azul.jpg' },
   CHASIN: { rosado: 'chaleco-peso.jpg', negro: 'chaleco-peso-negro.jpg', verde: 'chaleco-peso-verde.jpg', plomo: 'chaleco-peso-plomo.jpg' },
+  SOGPVC: { celeste: 'soga-pvc.jpg', naranja: 'soga-pvc-naranja.jpg' },
   STEPVC: { azul: 'step-pvc.jpg', plomo: 'step-pvc-plomo.jpg' },
   GUAPLA: { rojo: 'guantes-box.jpg', negro: 'guantes-box-negro.jpg' }
 };
