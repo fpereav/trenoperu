@@ -15,16 +15,7 @@
   };
   var CATEGORIES = ['Todo', 'Packs', 'Pesas', 'Yoga', 'Cardio', 'Resistencia', 'Accesorios', 'Funcional', 'Box', 'Recuperación'];
   var PRICE_RANGES = { low: [0, 70], mid: [70, 150], high: [150, Infinity] };
-  // Photos per product color; a missing color falls back to the main photo with a note.
-  var COLOR_IMAGES = {
-    KETPVC: { rosado: 'kettlebell-pvc.jpg', negro: 'kettlebell-pvc-negro.jpg', rojo: 'kettlebell-pvc-rojo.jpg' },
-    MANVIN: { rosado: 'mancuerna-vinilo.jpg', morado: 'mancuerna-vinilo-morado.jpg', rojo: 'mancuerna-vinilo-rojo.jpg' },
-    MATGOM: { rosado: 'mat-goma-eva.jpg', fucsia: 'mat-goma-eva-fucsia.jpg', verde: 'mat-goma-eva-verde.jpg' },
-    TOBPLA: { rosado: 'tobillera-peso.jpg', negro: 'tobillera-peso-negro.jpg', azul: 'tobillera-peso-azul.jpg' },
-    CHASIN: { rosado: 'chaleco-peso.jpg', negro: 'chaleco-peso-negro.jpg', verde: 'chaleco-peso-verde.jpg', plomo: 'chaleco-peso-plomo.jpg' },
-    STEPVC: { azul: 'step-pvc.jpg', plomo: 'step-pvc-plomo.jpg' },
-    GUAPLA: { rojo: 'guantes-box.jpg', negro: 'guantes-box-negro.jpg' }
-  };
+  var COLOR_IMAGES = window.TRENO_COLOR_IMAGES || {};
   var HEART = 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z';
   var SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -120,17 +111,20 @@
     var tile = el('div', 'tile');
 
     var img = el('img');
-    var photos = COLOR_IMAGES[p.id];
     var color = pickedColor(p);
-    var photo = photos && photos[color];
-    img.src = IMG + (photo || p.img);
+    var uploaded = p.photos || {};
+    var builtIn = COLOR_IMAGES[p.id] || {};
+    var colorPhoto = uploaded[color] || (builtIn[color] && IMG + builtIn[color]);
+    img.src = colorPhoto || uploaded.principal || IMG + p.img;
     img.alt = p.name;
     img.loading = 'lazy';
     img.addEventListener('error', function () {
       tile.replaceChild(el('div', 'tile__empty', 'Foto próximamente'), img);
     });
     tile.appendChild(img);
-    if (photos && !photo) tile.appendChild(el('span', 'tile__note', 'Foto en otro color'));
+    var hasColorPhotos = Object.keys(builtIn).length > 0 ||
+      Object.keys(uploaded).some(function (slot) { return slot !== 'principal'; });
+    if (hasColorPhotos && !colorPhoto) tile.appendChild(el('span', 'tile__note', 'Foto en otro color'));
 
     var favButton = button('tile__fav', undefined, function () {
       var favs = Object.assign({}, state.favs);
@@ -154,6 +148,7 @@
     var card = el('article', 'card');
     card.appendChild(productTile(p));
     card.appendChild(el('h3', 'card__name', p.name));
+    if (p.description) card.appendChild(el('p', 'card__description', p.description));
     card.appendChild(el('div', 'card__meta', p.cat + ' · ' + COLORS[color][0]));
     card.appendChild(el('div', 'card__price', money(p.price)));
 

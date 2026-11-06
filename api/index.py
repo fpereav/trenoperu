@@ -17,12 +17,16 @@ MAX_BODY_BYTES = 20_000
 MAX_LINES = 30
 MAX_QTY = 20
 MAX_STOCK = 100_000
+MAX_IMAGE_BYTES = 2_000_000
+MAIN_SLOT = "principal"
 ORDERS_PER_IP_PER_HOUR = 5
 SESSION_SECONDS = 12 * 60 * 60
 COOKIE = "treno_admin"
 LOCAL_HOSTS = ("127.0.0.1", "localhost")
 STATUSES = ("pendiente", "pagado", "entregado", "cancelado")
 PHONE_RE = re.compile(r"^[0-9+() \-]{7,20}$")
+PRODUCT_NAME_MAX = 120
+PRODUCT_DESCRIPTION_MAX = 500
 FIELD_LIMITS = {"name": 120, "phone": 20, "address": 240, "city": 80, "notes": 500}
 
 
@@ -52,23 +56,38 @@ def rows(conn, sql, **params):
     return [dict(zip(names, row)) for row in result]
 
 
+def uploaded_photos(conn):
+    photos = {}
+    for row in rows(
+        conn,
+        "SELECT product_id, slot, extract(epoch FROM updated_at)::bigint AS version "
+        "FROM product_images",
+    ):
+        url = f"/api/images/{row['product_id']}/{row['slot']}?v={row['version']}"
+        photos.setdefault(row["product_id"], {})[row["slot"]] = url
+    return photos
+
+
 def list_products():
     conn = connect()
     try:
         products = rows(
             conn,
-            "SELECT id, name, category, price_cents, image, colors, stock, top "
+            "SELECT id, name, description, category, price_cents, image, colors, stock, top "
             "FROM products ORDER BY sort_order",
         )
+        photos = uploaded_photos(conn)
     finally:
         conn.close()
     return [
         {
             "id": p["id"],
             "name": p["name"],
+            "description": p["description"],
             "cat": p["category"],
             "price": p["price_cents"] / 100,
             "img": p["image"],
+            "photos": photos.get(p["id"], {}),
             "colors": p["colors"],
             "inStock": p["stock"] > 0,
             "low": 0 < p["stock"] <= 2,
@@ -260,15 +279,99 @@ def admin_products():
     try:
         products = rows(
             conn,
-            "SELECT id, name, category, price_cents, stock FROM products ORDER BY sort_order",
+            "SELECT id, name, description, category, price_cents, stock, image, colors "
+            "FROM products ORDER BY sort_order",
         )
+        photos = uploaded_photos(conn)
     finally:
         conn.close()
     return [
-        {"id": p["id"], "name": p["name"], "cat": p["category"],
-         "price": p["price_cents"] / 100, "stock": p["stock"]}
+        {"id": p["id"], "name": p["name"], "description": p["description"], "cat": p["category"],
+         "price": p["price_cents"] / 100, "stock": p["stock"], "img": p["image"],
+         "colors": p["colors"], "photos": photos.get(p["id"], {})}
         for p in products
     ]
+
+
+def set_product_details(product_id, payload):
+    name, description = payload.get("name"), payload.get("description")
+    if not isinstance(name, str) or not isinstance(description, str):
+        raise ApiError(400, "Revisa el nombre y la descripción.")
+    name, description = name.strip(), description.strip()
+    if not name:
+        raise ApiError(400, "El producto debe tener un nombre.")
+    if len(name) > PRODUCT_NAME_MAX:
+        raise ApiError(400, f"El nombre admite hasta {PRODUCT_NAME_MAX} caracteres.")
+    if len(description) > PRODUCT_DESCRIPTION_MAX:
+        raise ApiError(400, f"La descripción admite hasta {PRODUCT_DESCRIPTION_MAX} caracteres.")
+    conn = connect()
+    try:
+        updated = conn.run(
+            "UPDATE products SET name = :name, description = :description WHERE id = :id RETURNING id",
+            name=name,
+            description=description,
+            id=product_id,
+        )
+    finally:
+        conn.close()
+    if not updated:
+        raise ApiError(404, "Producto no encontrado.")
+    return {"id": product_id, "name": name, "description": description}
+
+
+def check_photo_slot(conn, product_id, slot):
+    found = conn.run("SELECT colors FROM products WHERE id = :id", id=product_id)
+    if not found:
+        raise ApiError(404, "Producto no encontrado.")
+    if slot != MAIN_SLOT and slot not in found[0][0]:
+        raise ApiError(400, "Ese color no pertenece al producto.")
+
+
+def photos_of(conn, product_id):
+    return uploaded_photos(conn).get(product_id, {})
+
+
+def save_product_photo(product_id, slot, data):
+    if not data.startswith(b"\xff\xd8\xff"):
+        raise ApiError(415, "La foto debe enviarse como JPG.")
+    conn = connect()
+    try:
+        check_photo_slot(conn, product_id, slot)
+        conn.run(
+            "INSERT INTO product_images (product_id, slot, data) VALUES (:id, :slot, :data) "
+            "ON CONFLICT (product_id, slot) DO UPDATE SET data = EXCLUDED.data, updated_at = now()",
+            id=product_id,
+            slot=slot,
+            data=data,
+        )
+        return {"id": product_id, "photos": photos_of(conn, product_id)}
+    finally:
+        conn.close()
+
+
+def delete_product_photo(product_id, slot):
+    conn = connect()
+    try:
+        check_photo_slot(conn, product_id, slot)
+        conn.run("DELETE FROM product_images WHERE product_id = :id AND slot = :slot", id=product_id, slot=slot)
+        return {"id": product_id, "photos": photos_of(conn, product_id)}
+    finally:
+        conn.close()
+
+
+def read_product_photo(product_id, slot):
+    conn = connect()
+    try:
+        found = conn.run(
+            "SELECT data FROM product_images WHERE product_id = :id AND slot = :slot",
+            id=product_id,
+            slot=slot,
+        )
+    finally:
+        conn.close()
+    if not found:
+        raise ApiError(404, "Foto no encontrada.")
+    return bytes(found[0][0])
 
 
 def set_product_stock(product_id, payload):
@@ -330,6 +433,28 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def send_image(self, data):
+        self.send_response(200)
+        self.send_header("Content-Type", "image/jpeg")
+        self.send_header("Content-Length", str(len(data)))
+        # URLs carry a version, so a changed photo always gets a new address.
+        self.send_header("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def read_image(self):
+        if self.headers.get("Content-Type", "").split(";")[0].strip() != "image/jpeg":
+            raise ApiError(415, "La foto debe enviarse como JPG.")
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            raise ApiError(400, "Solicitud no válida.")
+        if length <= 0:
+            raise ApiError(400, "No se recibió ninguna foto.")
+        if length > MAX_IMAGE_BYTES:
+            raise ApiError(413, "La foto es demasiado grande.")
+        return self.rfile.read(length)
+
     def read_json(self):
         if "application/json" not in self.headers.get("Content-Type", ""):
             raise ApiError(415, "Se esperaba JSON.")
@@ -367,6 +492,9 @@ class handler(BaseHTTPRequestHandler):
 
         if method == "GET" and path == "/api/products":
             return self.send_json(200, list_products())
+        image = re.fullmatch(r"/api/images/([A-Z0-9]{1,20})/([a-z]{1,20})", path)
+        if method == "GET" and image:
+            return self.send_image(read_product_photo(image.group(1), image.group(2)))
         if method == "POST" and path == "/api/orders":
             return self.send_json(201, create_order(self.read_json(), self.client_ip()))
         if method == "POST" and path == "/api/admin/login":
@@ -396,6 +524,17 @@ class handler(BaseHTTPRequestHandler):
         if method == "PATCH" and product:
             self.require_admin()
             return self.send_json(200, set_product_stock(product.group(1), self.read_json()))
+        details = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/details", path)
+        if method == "PATCH" and details:
+            self.require_admin()
+            return self.send_json(200, set_product_details(details.group(1), self.read_json()))
+        photo = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/photos/([a-z]{1,20})", path)
+        if method == "PUT" and photo:
+            self.require_admin()
+            return self.send_json(200, save_product_photo(photo.group(1), photo.group(2), self.read_image()))
+        if method == "DELETE" and photo:
+            self.require_admin()
+            return self.send_json(200, delete_product_photo(photo.group(1), photo.group(2)))
         match = re.fullmatch(r"/api/admin/orders/(\d{1,12})", path)
         if method == "PATCH" and match:
             self.require_admin()
@@ -419,4 +558,10 @@ class handler(BaseHTTPRequestHandler):
         self.serve_api()
 
     def do_PATCH(self):
+        self.serve_api()
+
+    def do_PUT(self):
+        self.serve_api()
+
+    def do_DELETE(self):
         self.serve_api()

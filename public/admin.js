@@ -44,71 +44,222 @@
     else loadOrders();
   }
 
-  function stockRow(product) {
-    var row = document.createElement('tr');
-    var name = cell([product.name]);
-    if (product.stock === 0 || product.stock <= 2) {
-      var low = document.createElement('span');
-      low.className = 'stock-low';
-      low.textContent = product.stock === 0 ? 'Agotado' : 'Stock bajo';
-      name.firstChild.appendChild(low);
-    }
-    row.appendChild(name);
-    row.appendChild(cell([product.cat]));
-    row.appendChild(cell([money(product.price)]));
+  var MAX_PHOTO_SIDE = 1000;
+  var MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 
-    var input = document.createElement('input');
-    input.type = 'number';
-    input.min = '0';
-    input.max = '100000';
-    input.step = '1';
-    input.value = product.stock;
-    input.className = 'stock-input';
-    input.setAttribute('aria-label', 'Stock de ' + product.name);
-    var inputCell = document.createElement('td');
-    inputCell.appendChild(input);
-    row.appendChild(inputCell);
+  function makeEl(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
 
-    var save = document.createElement('button');
-    save.type = 'button';
-    save.className = 'stock-save';
-    save.textContent = 'Guardar';
-    save.disabled = true;
-    save.setAttribute('aria-label', 'Guardar stock de ' + product.name);
-    input.addEventListener('input', function () {
-      save.textContent = 'Guardar';
-      save.disabled = input.value === String(product.stock);
+  // Shrink in the browser so every upload stays small, whatever the camera produced.
+  function toJpeg(file) {
+    if (file.size > MAX_SOURCE_BYTES) return Promise.reject(new Error('La foto pesa demasiado. Usa una de menos de 25 MB.'));
+    return createImageBitmap(file).catch(function () {
+      throw new Error('No se pudo leer la foto. Usa un archivo JPG, PNG o WebP.');
+    }).then(function (bitmap) {
+      var scale = Math.min(1, MAX_PHOTO_SIDE / Math.max(bitmap.width, bitmap.height));
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      var context = canvas.getContext('2d');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      return new Promise(function (resolve, reject) {
+        canvas.toBlob(function (blob) {
+          if (blob) resolve(blob); else reject(new Error('No se pudo procesar la foto.'));
+        }, 'image/jpeg', 0.85);
+      });
     });
-    save.addEventListener('click', function () {
-      var value = Number(input.value);
-      var box = byId('stock-error');
-      box.hidden = true;
-      save.disabled = true;
+  }
+
+  function currentPhoto(product, slot) {
+    if (product.photos[slot]) return product.photos[slot];
+    if (slot === 'principal') return 'assets/img/' + product.img;
+    var builtIn = (window.TRENO_COLOR_IMAGES || {})[product.id] || {};
+    return builtIn[slot] ? 'assets/img/' + builtIn[slot] : null;
+  }
+
+  function photoSlot(product, slot, editor, status) {
+    var wrap = makeEl('div', 'slot');
+    wrap.appendChild(makeEl('span', 'slot__name', slot));
+    var src = currentPhoto(product, slot);
+    var showEmpty = function () { return makeEl('div', 'slot__empty', 'Sin foto'); };
+    if (src) {
+      var thumb = makeEl('img', 'slot__thumb');
+      thumb.src = src;
+      thumb.alt = 'Foto ' + slot + ' de ' + product.name;
+      thumb.addEventListener('error', function () { thumb.replaceWith(showEmpty()); });
+      wrap.appendChild(thumb);
+    } else {
+      wrap.appendChild(showEmpty());
+    }
+
+    var upload = makeEl('label', 'slot__button', product.photos[slot] ? 'Cambiar' : 'Subir');
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/jpeg,image/png,image/webp';
+    input.setAttribute('aria-label', 'Subir foto ' + slot + ' de ' + product.name);
+    input.addEventListener('change', function () {
+      var file = input.files[0];
+      if (!file) return;
+      setStatus(status, 'Subiendo foto…');
+      toJpeg(file).then(function (blob) {
+        return api('/api/admin/products/' + product.id + '/photos/' + slot, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'image/jpeg' },
+          body: blob
+        });
+      }).then(function (body) {
+        product.photos = body.photos;
+        replaceEditor(product, editor, 'Foto guardada.');
+      }).catch(function (error) { handleEditorError(error, status); });
+    });
+    upload.appendChild(input);
+    wrap.appendChild(upload);
+
+    if (product.photos[slot]) {
+      var remove = makeEl('button', 'slot__remove', 'Quitar');
+      remove.type = 'button';
+      remove.setAttribute('aria-label', 'Quitar foto ' + slot + ' de ' + product.name);
+      remove.addEventListener('click', function () {
+        if (!window.confirm('¿Quitar esta foto de ' + product.name + '?')) return;
+        api('/api/admin/products/' + product.id + '/photos/' + slot, { method: 'DELETE' }).then(function (body) {
+          product.photos = body.photos;
+          replaceEditor(product, editor, 'Foto quitada.');
+        }).catch(function (error) { handleEditorError(error, status); });
+      });
+      wrap.appendChild(remove);
+    }
+    return wrap;
+  }
+
+  function setStatus(status, message, isError) {
+    status.textContent = message;
+    status.className = 'editor__status' + (isError ? ' editor__status--error' : '');
+  }
+
+  function handleEditorError(error, status) {
+    if (error.status === 401) return showLogin('Tu sesión expiró.');
+    setStatus(status, error.message, true);
+  }
+
+  function replaceEditor(product, editor, message) {
+    var fresh = productEditor(product);
+    editor.replaceWith(fresh);
+    if (message) setStatus(fresh.querySelector('.editor__status'), message);
+  }
+
+  function productEditor(product) {
+    var editor = makeEl('article', 'editor');
+    var title = makeEl('h2', '', product.name);
+    title.appendChild(makeEl('span', 'editor__meta', product.cat + ' · ' + money(product.price)));
+    if (product.stock <= 2) {
+      title.appendChild(makeEl('span', 'stock-low', product.stock === 0 ? 'Agotado' : 'Stock bajo'));
+    }
+    editor.appendChild(title);
+
+    var fields = makeEl('div', 'editor__fields');
+    var nameLabel = makeEl('label', '', 'Nombre');
+    var name = document.createElement('input');
+    name.type = 'text';
+    name.maxLength = 120;
+    name.value = product.name;
+    name.setAttribute('aria-label', 'Nombre de ' + product.name);
+    nameLabel.appendChild(name);
+    fields.appendChild(nameLabel);
+
+    var descriptionLabel = makeEl('label', '', 'Descripción');
+    var description = document.createElement('textarea');
+    description.rows = 3;
+    description.maxLength = 500;
+    description.value = product.description;
+    description.setAttribute('aria-label', 'Descripción de ' + product.name);
+    descriptionLabel.appendChild(description);
+    fields.appendChild(descriptionLabel);
+
+    var saveDetails = makeEl('button', 'stock-save', 'Guardar nombre y descripción');
+    saveDetails.type = 'button';
+    saveDetails.disabled = true;
+    function detailsChanged() {
+      saveDetails.disabled = name.value === product.name && description.value === product.description;
+    }
+    name.addEventListener('input', detailsChanged);
+    description.addEventListener('input', detailsChanged);
+    fields.appendChild(saveDetails);
+
+    var stockRow = makeEl('div', 'editor__row');
+    var stockLabel = makeEl('label', '', 'Stock');
+    var stock = document.createElement('input');
+    stock.type = 'number';
+    stock.min = '0';
+    stock.max = '100000';
+    stock.step = '1';
+    stock.value = product.stock;
+    stock.className = 'stock-input';
+    stock.setAttribute('aria-label', 'Stock de ' + product.name);
+    stockLabel.appendChild(stock);
+    stockRow.appendChild(stockLabel);
+    var saveStock = makeEl('button', 'stock-save', 'Guardar stock');
+    saveStock.type = 'button';
+    saveStock.disabled = true;
+    stock.addEventListener('input', function () {
+      saveStock.disabled = stock.value === String(product.stock);
+    });
+    stockRow.appendChild(saveStock);
+    fields.appendChild(stockRow);
+
+    var status = makeEl('p', 'editor__status');
+    status.setAttribute('role', 'status');
+    fields.appendChild(status);
+    editor.appendChild(fields);
+
+    saveDetails.addEventListener('click', function () {
+      saveDetails.disabled = true;
+      api('/api/admin/products/' + product.id + '/details', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.value, description: description.value })
+      }).then(function (body) {
+        product.name = body.name;
+        product.description = body.description;
+        replaceEditor(product, editor, 'Nombre y descripción guardados.');
+      }).catch(function (error) {
+        detailsChanged();
+        handleEditorError(error, status);
+      });
+    });
+
+    saveStock.addEventListener('click', function () {
+      saveStock.disabled = true;
       api('/api/admin/products/' + product.id, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stock: value, expected: product.stock })
-      }).then(function () {
-        return loadStock();
-      }).then(function () {
-        var saved = document.querySelector('[aria-label="Guardar stock de ' + product.name + '"]');
-        if (saved) saved.textContent = 'Guardado';
+        body: JSON.stringify({ stock: Number(stock.value), expected: product.stock })
+      }).then(function (body) {
+        product.stock = body.stock;
+        replaceEditor(product, editor, 'Stock guardado.');
       }).catch(function (error) {
-        if (error.status === 401) return showLogin('Tu sesión expiró.');
-        box.textContent = error.message;
-        box.hidden = false;
-        loadStock();
+        saveStock.disabled = false;
+        handleEditorError(error, status);
       });
     });
-    var saveCell = document.createElement('td');
-    saveCell.appendChild(save);
-    row.appendChild(saveCell);
-    return row;
+
+    var slots = makeEl('div', 'slots');
+    ['principal'].concat(product.colors).forEach(function (slot) {
+      slots.appendChild(photoSlot(product, slot, editor, status));
+    });
+    editor.appendChild(slots);
+    return editor;
   }
 
   function loadStock() {
     return api('/api/admin/products').then(function (products) {
-      byId('stock-rows').replaceChildren.apply(byId('stock-rows'), products.map(stockRow));
+      byId('stock-rows').replaceChildren.apply(byId('stock-rows'), products.map(productEditor));
     }).catch(function (error) {
       if (error.status === 401) return showLogin('Tu sesión expiró.');
       var box = byId('stock-error');

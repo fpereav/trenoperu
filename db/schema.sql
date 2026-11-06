@@ -10,6 +10,17 @@ CREATE TABLE IF NOT EXISTS products (
   sort_order  integer NOT NULL
 );
 
+ALTER TABLE products ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT '';
+
+-- Photos uploaded in the admin panel. slot is 'principal' or a product color.
+CREATE TABLE IF NOT EXISTS product_images (
+  product_id text NOT NULL REFERENCES products (id) ON DELETE CASCADE,
+  slot       text NOT NULL,
+  data       bytea NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (product_id, slot)
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   id            bigserial PRIMARY KEY,
   created_at    timestamptz NOT NULL DEFAULT now(),

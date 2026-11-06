@@ -160,6 +160,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tile__badge--low { background: var(--accent); }
 .tile__badge--out { background: var(--line); }
 .card__name { margin: 12px 0 2px; font-size: 14px; font-weight: 500; line-height: 1.35; }
+.card__description { display: -webkit-box; margin: 0 0 4px; overflow: hidden; color: #444444; font-size: 13px; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .card__meta { color: var(--muted); font-size: 13px; }
 .card__price { margin-top: 4px; font-size: 16px; font-weight: 700; }
 .swatches { display: flex; flex-wrap: wrap; justify-content: center; gap: 0; margin: 4px 0 8px; }
