@@ -119,6 +119,20 @@ a { color: inherit; }
 .variant .final-price output.is-invalid { font-size: 11px; line-height: 1.2; }
 .product__stock-total { font-size: 13px; font-weight: 600; white-space: nowrap; }
 
+.category-picker { display: flex; flex-direction: column; gap: 8px; }
+
+/* Excel */
+.toolbar__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.file-btn { position: relative; }
+.file-btn:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.file-btn input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.import-panel { margin-bottom: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
+.import-panel__summary { margin: 0 0 10px; font-weight: 600; }
+.import-panel__warning { margin: 0 0 10px; padding: 8px 10px; border-radius: 6px; background: #FFF7E0; font-size: 13px; }
+.import-list { max-height: 280px; margin: 0; padding: 10px 10px 10px 28px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+.import-list + .import-list { margin-top: 8px; }
+.import-list--errors { background: #FFF2F5; color: var(--danger); }
+
 /* New product */
 .new-form { margin-bottom: 16px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
 .new-form__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }

@@ -2,6 +2,7 @@
 import hashlib
 import hmac
 import html
+import io
 import json
 import os
 import re
@@ -10,6 +11,8 @@ import ssl
 import sys
 import time
 import traceback
+import unicodedata
+import zipfile
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import unquote, urlsplit
 
@@ -22,6 +25,21 @@ MAX_STOCK = 100_000
 MAX_IMAGE_BYTES = 2_000_000
 MAIN_SLOT = "principal"
 MAX_PHOTOS_PER_SLOT = 10
+COLOR_NAMES = {
+    "rosado": "Rosado", "negro": "Negro", "rojo": "Rojo", "morado": "Morado", "plomo": "Plomo", "verde": "Verde",
+    "fucsia": "Fucsia", "marino": "Azul marino", "azul": "Azul", "celeste": "Celeste", "naranja": "Naranja",
+    "amarillo": "Amarillo",
+}
+EXCEL_COLUMNS = (
+    "ID", "Nombre", "Categoría", "Presentación", "Precio (S/)", "Descuento (S/)",
+    "Precio final (S/)", "Stock", "Colores", "Descripción",
+)
+EXCEL_REQUIRED = ("ID", "Nombre", "Categoría", "Presentación", "Precio (S/)", "Descuento (S/)", "Stock", "Colores", "Descripción")
+XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+MAX_EXCEL_BYTES = 3_000_000
+MAX_EXCEL_UNZIPPED = 40_000_000
+MAX_EXCEL_ROWS = 2000
+MAX_EXCEL_CHANGES_SHOWN = 300
 VARIANT_LABEL_MAX = 40
 MAX_VARIANTS_PER_PRODUCT = 30
 # On sale: an option with stock if the product has options, otherwise its own stock.
@@ -456,8 +474,13 @@ def clean_stock(value):
     return value
 
 
+def default_description(name):
+    return f"{name} para entrenar en casa, en el parque o donde quieras."[:PRODUCT_DESCRIPTION_MAX]
+
+
 def create_product(payload):
     name, description = clean_product_text(payload)
+    description = description or default_description(name)
     category = clean_category(payload.get("category"))
     price_cents = clean_price_cents(payload.get("price"))
     discount_cents = clean_discount_cents(payload.get("discount", 0), price_cents)
@@ -701,6 +724,372 @@ def delete_product_variant(product_id, variant_id):
         conn.close()
 
 
+def colors_to_text(colors):
+    return ", ".join(COLOR_NAMES.get(color, color) for color in colors)
+
+
+def export_excel():
+    # Imported here so public pages don't pay for loading it on a cold start.
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill
+
+    conn = connect()
+    try:
+        products = rows(
+            conn,
+            "SELECT id, name, description, category, price_cents, discount_cents, stock, colors "
+            "FROM products ORDER BY sort_order",
+        )
+        variants = variants_by_product(conn)
+    finally:
+        conn.close()
+
+    book = Workbook()
+    sheet = book.active
+    sheet.title = "Productos"
+    sheet.append(EXCEL_COLUMNS)
+    for cell in sheet[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="111111")
+    sheet.freeze_panes = "A2"
+    for column, width in zip("ABCDEFGHIJ", (16, 38, 16, 16, 12, 14, 16, 8, 30, 50)):
+        sheet.column_dimensions[column].width = width
+
+    def add_row(p, label, holder):
+        values = (
+            p["id"], p["name"], p["category"], label, holder["price_cents"] / 100, holder["discount_cents"] / 100,
+            (holder["price_cents"] - holder["discount_cents"]) / 100, holder["stock"],
+            colors_to_text(p["colors"]), p["description"],
+        )
+        sheet.append(values)
+        # Text stays text: a name starting with "=" must not become a formula in Excel.
+        for cell in sheet[sheet.max_row]:
+            if isinstance(cell.value, str):
+                cell.data_type = "s"
+
+    for p in products:
+        options = variants.get(p["id"], [])
+        if options:
+            for option in options:
+                add_row(p, option["label"], option)
+        else:
+            add_row(p, "", p)
+
+    help_sheet = book.create_sheet("Instrucciones")
+    help_sheet.column_dimensions["A"].width = 110
+    for line in (
+        "Edita la hoja Productos y vuelve a importarla desde el admin. Antes de aplicar verás los cambios.",
+        "Producto nuevo: deja ID vacío. Si tiene varias presentaciones, usa una fila por cada una con el mismo nombre.",
+        "Presentación: peso o tamaño, por ejemplo 10 kg. Déjala vacía si el producto no tiene presentaciones.",
+        "Presentación nueva: agrega una fila con el ID del producto y la nueva presentación.",
+        "Colores: nombres separados por comas: " + ", ".join(COLOR_NAMES.values()) + ".",
+        "Precio final es solo informativo: se calcula con Precio menos Descuento.",
+        "El stock del archivo reemplaza al actual. Exporta de nuevo si hubo ventas desde tu última descarga.",
+        "Quitar una fila no elimina el producto ni la presentación. Las fotos se gestionan en el admin.",
+    ):
+        help_sheet.append((line,))
+
+    output = io.BytesIO()
+    book.save(output)
+    return output.getvalue()
+
+
+def plain_text(value):
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
+
+
+def folded(text):
+    decomposed = unicodedata.normalize("NFD", text.strip().lower())
+    return "".join(c for c in decomposed if unicodedata.category(c) != "Mn")
+
+
+def excel_number(value, label):
+    if isinstance(value, bool):
+        raise ApiError(400, f"{label} no es un número.")
+    if isinstance(value, (int, float)):
+        return value
+    text = plain_text(value).replace("S/", "").replace(",", ".").strip()
+    try:
+        return float(text)
+    except ValueError:
+        raise ApiError(400, f"{label} no es un número.")
+
+
+def excel_colors(text):
+    by_name = {folded(name): key for key, name in COLOR_NAMES.items()}
+    by_name.update({key: key for key in COLOR_NAMES})
+    colors = []
+    for part in text.split(","):
+        if not part.strip():
+            continue
+        key = by_name.get(folded(part))
+        if not key:
+            raise ApiError(400, f"Color desconocido: {part.strip()}.")
+        if key not in colors:
+            colors.append(key)
+    return colors
+
+
+def read_excel_rows(data):
+    from openpyxl import load_workbook
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            if sum(info.file_size for info in archive.infolist()) > MAX_EXCEL_UNZIPPED:
+                raise ApiError(413, "El archivo es demasiado grande.")
+        book = load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+        sheet = book.worksheets[0]
+        table = list(sheet.iter_rows(values_only=True, max_row=MAX_EXCEL_ROWS + 2))
+    except ApiError:
+        raise
+    except Exception:
+        raise ApiError(400, "No se pudo leer el archivo. Usa un Excel .xlsx exportado desde el admin.")
+    if not table:
+        raise ApiError(400, "El archivo está vacío.")
+    headers = {plain_text(name): index for index, name in enumerate(table[0]) if plain_text(name)}
+    missing = [name for name in EXCEL_REQUIRED if name not in headers]
+    if missing:
+        raise ApiError(400, "Faltan columnas: " + ", ".join(missing) + ".")
+    if len(table) > MAX_EXCEL_ROWS + 1:
+        raise ApiError(400, f"El archivo admite hasta {MAX_EXCEL_ROWS} filas.")
+    result = []
+    for number, values in enumerate(table[1:], start=2):
+        if all(plain_text(value) == "" for value in values):
+            continue
+        cell = lambda name: values[headers[name]] if headers[name] < len(values) else None
+        result.append((number, {name: cell(name) for name in EXCEL_REQUIRED}))
+    if not result:
+        raise ApiError(400, "El archivo no tiene productos.")
+    return result
+
+
+def parse_excel_row(raw):
+    product_id = plain_text(raw["ID"]).upper()
+    name, description = clean_product_text({
+        "name": plain_text(raw["Nombre"]),
+        "description": plain_text(raw["Descripción"]),
+    })
+    category = clean_category(plain_text(raw["Categoría"]))
+    label = plain_text(raw["Presentación"])
+    if len(label) > VARIANT_LABEL_MAX:
+        raise ApiError(400, f"La presentación admite hasta {VARIANT_LABEL_MAX} caracteres.")
+    price_cents = clean_price_cents(excel_number(raw["Precio (S/)"], "Precio"))
+    discount_raw = raw["Descuento (S/)"]
+    discount = 0 if plain_text(discount_raw) == "" else excel_number(discount_raw, "Descuento")
+    discount_cents = clean_discount_cents(discount, price_cents)
+    stock_value = excel_number(raw["Stock"], "Stock")
+    if float(stock_value) != int(stock_value):
+        raise ApiError(400, "El stock debe ser un número entero.")
+    return {
+        "id": product_id, "name": name, "description": description, "category": category,
+        "label": label, "price": price_cents, "discount": discount_cents,
+        "stock": clean_stock(int(stock_value)), "colors": excel_colors(plain_text(raw["Colores"])),
+    }
+
+
+def money_text(cents):
+    return f"S/ {cents / 100:.2f}"
+
+
+def holder_changes(prefix, holder, row):
+    changes = []
+    if holder["price_cents"] != row["price"]:
+        changes.append(f"{prefix}: precio {money_text(holder['price_cents'])} → {money_text(row['price'])}")
+    if holder["discount_cents"] != row["discount"]:
+        changes.append(f"{prefix}: descuento {money_text(holder['discount_cents'])} → {money_text(row['discount'])}")
+    if holder["stock"] != row["stock"]:
+        changes.append(f"{prefix}: stock {holder['stock']} → {row['stock']}")
+    return changes
+
+
+def import_excel(data, apply_changes):
+    table = read_excel_rows(data)
+    errors = []
+    parsed = []
+    for number, raw in table:
+        try:
+            parsed.append((number, parse_excel_row(raw)))
+        except ApiError as error:
+            errors.append({"row": number, "message": error.message})
+
+    conn = connect()
+    try:
+        conn.run("START TRANSACTION")
+        products = {
+            p["id"]: p
+            for p in rows(
+                conn,
+                "SELECT id, name, description, category, price_cents, discount_cents, stock, colors "
+                "FROM products ORDER BY id FOR UPDATE",
+            )
+        }
+        variants = {}
+        for option in rows(
+            conn,
+            "SELECT id, product_id, label, price_cents, discount_cents, stock FROM product_variants "
+            "ORDER BY id FOR UPDATE",
+        ):
+            variants.setdefault(option["product_id"], []).append(option)
+        names = {folded(p["name"]): p["id"] for p in products.values()}
+
+        groups = {}
+        for number, row in parsed:
+            key = row["id"] or "nuevo:" + folded(row["name"])
+            groups.setdefault(key, []).append((number, row))
+
+        changes = []
+        created = updated = 0
+        for key, group in groups.items():
+            first_number, first = group[0]
+            group_errors = []
+            # Later rows may leave description and colors empty to share the product's.
+            for field in ("description", "colors"):
+                first[field] = next((row[field] for _, row in group if row[field]), first[field])
+            for number, row in group[1:]:
+                for field, label in (("name", "Nombre"), ("category", "Categoría"), ("description", "Descripción"), ("colors", "Colores")):
+                    if row[field] != first[field] and (row[field] or field in ("name", "category")):
+                        group_errors.append({"row": number, "message": f"{label} distinto al de la fila {first_number} del mismo producto."})
+            labels = [folded(row["label"]) for _, row in group]
+            if any(labels) and not all(labels):
+                group_errors.append({"row": first_number, "message": "Todas las filas del producto deben indicar su presentación."})
+            if len(group) > 1 and not all(labels):
+                group_errors.append({"row": first_number, "message": "Este producto se repite sin indicar presentación."})
+            for index, (number, row) in enumerate(group):
+                if labels[index] and labels[index] in labels[:index]:
+                    group_errors.append({"row": number, "message": "Presentación repetida."})
+
+            is_new = not first["id"]
+            if is_new:
+                if folded(first["name"]) in names:
+                    group_errors.append({"row": first_number, "message": "Ya existe un producto con ese nombre. Escribe su ID para actualizarlo."})
+                if not first["colors"]:
+                    group_errors.append({"row": first_number, "message": "Indica al menos un color."})
+                current = None
+            else:
+                current = products.get(first["id"])
+                if not current:
+                    group_errors.append({"row": first_number, "message": "ID desconocido. Déjalo vacío para crear un producto nuevo."})
+                else:
+                    owner = names.get(folded(first["name"]))
+                    if owner and owner != first["id"]:
+                        group_errors.append({"row": first_number, "message": "Otro producto ya usa ese nombre."})
+                    if variants.get(first["id"]) and not all(labels):
+                        group_errors.append({"row": first_number, "message": "Este producto tiene presentaciones: indica cuál es en cada fila."})
+            existing_labels = {folded(v["label"]) for v in variants.get(first["id"], [])}
+            if len(existing_labels | set(filter(None, labels))) > MAX_VARIANTS_PER_PRODUCT:
+                group_errors.append({"row": first_number, "message": f"Máximo {MAX_VARIANTS_PER_PRODUCT} presentaciones por producto."})
+            if group_errors:
+                errors.extend(group_errors)
+                continue
+
+            has_options = all(labels)
+            if is_new:
+                created += 1
+                product_id = "P" + secrets.token_hex(5).upper()
+                changes.append("Nuevo producto: " + first["name"])
+                names[folded(first["name"])] = product_id
+                if apply_changes:
+                    conn.run(
+                        "INSERT INTO products (id, name, description, category, price_cents, discount_cents, image, colors, stock, sort_order) "
+                        "SELECT :id, :name, :description, :category, :price, :discount, '', CAST(:colors AS jsonb), :stock, "
+                        "coalesce(max(sort_order), 0) + 1 FROM products",
+                        id=product_id,
+                        name=first["name"],
+                        description=first["description"] or default_description(first["name"]),
+                        category=first["category"],
+                        price=first["price"],
+                        discount=first["discount"],
+                        colors=json.dumps(first["colors"]),
+                        stock=0 if has_options else first["stock"],
+                    )
+            else:
+                product_id = first["id"]
+                colors = first["colors"] or current["colors"]
+                product_changes = []
+                if current["name"] != first["name"]:
+                    product_changes.append(f"{current['name']}: nombre → {first['name']}")
+                if current["category"] != first["category"]:
+                    product_changes.append(f"{first['name']}: categoría {current['category']} → {first['category']}")
+                if current["description"] != first["description"]:
+                    product_changes.append(f"{first['name']}: descripción actualizada")
+                if current["colors"] != colors:
+                    product_changes.append(f"{first['name']}: colores {colors_to_text(current['colors'])} → {colors_to_text(colors)}")
+                if not has_options:
+                    product_changes.extend(holder_changes(first["name"], current, first))
+                if product_changes:
+                    updated += 1
+                changes.extend(product_changes)
+                if product_changes and apply_changes:
+                    conn.run(
+                        "UPDATE products SET name = :name, description = :description, category = :category, "
+                        "colors = CAST(:colors AS jsonb), price_cents = :price, discount_cents = :discount, stock = :stock "
+                        "WHERE id = :id",
+                        id=product_id,
+                        name=first["name"],
+                        description=first["description"],
+                        category=first["category"],
+                        colors=json.dumps(colors),
+                        price=first["price"] if not has_options else current["price_cents"],
+                        discount=first["discount"] if not has_options else current["discount_cents"],
+                        stock=first["stock"] if not has_options else current["stock"],
+                    )
+
+            if has_options:
+                existing = {folded(v["label"]): v for v in variants.get(product_id, [])}
+                for _, row in group:
+                    option = existing.get(folded(row["label"]))
+                    prefix = f"{first['name']} {row['label']}"
+                    if option:
+                        option_changes = holder_changes(prefix, option, row)
+                        if option_changes:
+                            changes.extend(option_changes)
+                            if not is_new and not any(c.startswith(first["name"] + ":") for c in changes[-len(option_changes):]):
+                                updated += 1
+                            if apply_changes:
+                                conn.run(
+                                    "UPDATE product_variants SET price_cents = :price, discount_cents = :discount, "
+                                    "stock = :stock WHERE id = :option",
+                                    price=row["price"],
+                                    discount=row["discount"],
+                                    stock=row["stock"],
+                                    option=option["id"],
+                                )
+                    else:
+                        changes.append("Nueva presentación: " + prefix)
+                        if apply_changes:
+                            conn.run(
+                                "INSERT INTO product_variants (product_id, label, price_cents, discount_cents, stock) "
+                                "VALUES (:id, :label, :price, :discount, :stock)",
+                                id=product_id,
+                                label=row["label"],
+                                price=row["price"],
+                                discount=row["discount"],
+                                stock=row["stock"],
+                            )
+
+        errors.sort(key=lambda error: error["row"])
+        applied = apply_changes and not errors
+        conn.run("COMMIT" if applied else "ROLLBACK")
+    except Exception:
+        conn.run("ROLLBACK")
+        raise
+    finally:
+        conn.close()
+    return {
+        "applied": applied,
+        "errors": errors[:MAX_EXCEL_CHANGES_SHOWN],
+        "errorCount": len(errors),
+        "changes": changes[:MAX_EXCEL_CHANGES_SHOWN],
+        "changeCount": len(changes),
+        "created": created,
+        "rows": len(table),
+    }
+
+
 def set_product_stock(product_id, payload):
     stock, expected = clean_stock(payload.get("stock")), clean_stock(payload.get("expected"))
     conn = connect()
@@ -913,6 +1302,28 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def send_excel(self, data, filename):
+        self.send_response(200)
+        self.send_header("Content-Type", XLSX_TYPE)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Content-Disposition", f'attachment; filename="{filename}"')
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def read_excel(self):
+        if self.headers.get("Content-Type", "").split(";")[0].strip() != XLSX_TYPE:
+            raise ApiError(415, "Sube un archivo Excel .xlsx.")
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            raise ApiError(400, "Solicitud no válida.")
+        if length <= 0:
+            raise ApiError(400, "No se recibió ningún archivo.")
+        if length > MAX_EXCEL_BYTES:
+            raise ApiError(413, "El archivo es demasiado grande. Admite hasta 3 MB.")
+        return self.rfile.read(length)
+
     def read_image(self):
         if self.headers.get("Content-Type", "").split(";")[0].strip() != "image/jpeg":
             raise ApiError(415, "La foto debe enviarse como JPG.")
@@ -1006,6 +1417,16 @@ class handler(BaseHTTPRequestHandler):
         if method == "PATCH" and product:
             self.require_admin()
             return self.send_json(200, set_product_stock(product.group(1), self.read_json()))
+        if method == "GET" and path == "/api/admin/export":
+            self.require_admin()
+            stamp = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 5 * 3600))
+            return self.send_excel(export_excel(), f"treno-productos-{stamp}.xlsx")
+        if method == "POST" and path == "/api/admin/import/preview":
+            self.require_admin()
+            return self.send_json(200, import_excel(self.read_excel(), False))
+        if method == "POST" and path == "/api/admin/import/apply":
+            self.require_admin()
+            return self.send_json(200, import_excel(self.read_excel(), True))
         new_variant = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/variants", path)
         if method == "POST" and new_variant:
             self.require_admin()

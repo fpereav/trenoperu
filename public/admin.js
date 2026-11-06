@@ -6,6 +6,7 @@
   var STATUS_NAMES = { pendiente: 'Pendiente', pagado: 'Pagado', entregado: 'Entregado', cancelado: 'Cancelado' };
   var COLOR_LIST = window.TRENO_COLORS;
   var LOW_STOCK = 2;
+  var NEW_CATEGORY = '__nueva__';
   var MAX_PHOTO_SIDE = 1000;
   var MAX_SOURCE_BYTES = 25 * 1024 * 1024;
   var dateFormat = new Intl.DateTimeFormat('es-PE', { dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Lima' });
@@ -319,6 +320,55 @@
     return label;
   }
 
+  function allCategories() {
+    var names = [];
+    products.forEach(function (p) { if (names.indexOf(p.cat) < 0) names.push(p.cat); });
+    return names.sort(function (a, b) { return a.localeCompare(b, 'es'); });
+  }
+
+  // A list of existing categories plus a "new category" choice with its own field.
+  function categoryPicker(current, ariaLabel) {
+    var node = el('div', 'category-picker');
+    var label = el('label', 'field', 'Categoría');
+    var select = el('select', 'select');
+    select.setAttribute('aria-label', ariaLabel);
+    allCategories().forEach(function (name) {
+      var option = el('option', '', name);
+      option.value = name;
+      select.appendChild(option);
+    });
+    var addOption = el('option', '', '+ Nueva categoría…');
+    addOption.value = NEW_CATEGORY;
+    select.appendChild(addOption);
+    select.value = current;
+    label.appendChild(select);
+    node.appendChild(label);
+
+    var otherLabel = el('label', 'field', 'Nombre de la nueva categoría');
+    var other = el('input', 'input');
+    other.type = 'text';
+    other.maxLength = 40;
+    other.setAttribute('aria-label', 'Nueva categoría para ' + ariaLabel);
+    otherLabel.appendChild(other);
+    otherLabel.hidden = true;
+    node.appendChild(otherLabel);
+
+    var listeners = [];
+    select.addEventListener('change', function () {
+      otherLabel.hidden = select.value !== NEW_CATEGORY;
+      if (!otherLabel.hidden) other.focus();
+      listeners.forEach(function (listener) { listener(); });
+    });
+    other.addEventListener('input', function () {
+      listeners.forEach(function (listener) { listener(); });
+    });
+    return {
+      node: node,
+      value: function () { return select.value === NEW_CATEGORY ? other.value.trim() : select.value; },
+      onChange: function (listener) { listeners.push(listener); }
+    };
+  }
+
   function variantEditor(product, variant, row) {
     var isNew = !variant;
     var ownerLabel = isNew ? 'nueva presentación de ' + product.name : variant.label + ' de ' + product.name;
@@ -608,14 +658,8 @@
     amountLabel.appendChild(amount);
     priceGrid.appendChild(amountLabel);
     fields.appendChild(priceGrid);
-    var categoryLabel = el('label', 'field', 'Categoría');
-    var category = el('input', 'input');
-    category.type = 'text';
-    category.maxLength = 40;
-    category.value = product.cat;
-    category.setAttribute('aria-label', 'Categoría de ' + product.name);
-    categoryLabel.appendChild(category);
-    fields.appendChild(categoryLabel);
+    var category = categoryPicker(product.cat, 'Categoría de ' + product.name);
+    fields.appendChild(category.node);
     var descriptionLabel = el('label', 'field', 'Descripción');
     var description = el('textarea', 'textarea');
     description.rows = 5;
@@ -630,7 +674,7 @@
       api('/api/admin/products/' + product.id + '/details', jsonRequest('PATCH', {
         name: name.value,
         description: description.value,
-        category: category.value,
+        category: category.value(),
         price: Number(price.value),
         discount: Number(amount.value) || 0
       })).then(function (body) {
@@ -648,16 +692,16 @@
     save.disabled = true;
     function detailsChanged() {
       var unchanged = name.value === product.name && description.value === product.description &&
-        category.value === product.cat && Number(price.value) === product.price &&
+        category.value() === product.cat && Number(price.value) === product.price &&
         roundMoney(Number(amount.value) || 0) === product.discount;
-      save.disabled = unchanged || !discountValid;
+      save.disabled = unchanged || !discountValid || !category.value().trim();
     }
     var discountValid = true;
     bindDiscount(price, percent, amount, finalOutput, function (valid) {
       discountValid = valid;
       if (save) detailsChanged();
     });
-    category.addEventListener('input', detailsChanged);
+    category.onChange(detailsChanged);
     name.addEventListener('input', detailsChanged);
     description.addEventListener('input', detailsChanged);
     fields.appendChild(save);
@@ -803,8 +847,6 @@
 
   /* New product */
 
-  var NEW_CATEGORY = '__nueva__';
-
   var refreshNewFinal = bindDiscount(byId('new-price'), byId('new-discount-percent'), byId('new-discount-amount'), byId('new-final'));
 
   function openNewForm() {
@@ -812,15 +854,13 @@
     form.reset();
     byId('new-error').hidden = true;
 
-    var names = [];
-    products.forEach(function (p) { if (names.indexOf(p.cat) < 0) names.push(p.cat); });
     var select = byId('new-category');
-    select.replaceChildren.apply(select, names.sort().map(function (name) {
+    select.replaceChildren.apply(select, allCategories().map(function (name) {
       var option = el('option', '', name);
       option.value = name;
       return option;
     }).concat([(function () {
-      var option = el('option', '', 'Nueva categoría…');
+      var option = el('option', '', '+ Nueva categoría…');
       option.value = NEW_CATEGORY;
       return option;
     })()]));
@@ -842,13 +882,11 @@
     }));
 
     form.hidden = false;
-    byId('new-product').hidden = true;
     byId('new-name').focus();
   }
 
   function closeNewForm() {
     byId('new-form').hidden = true;
-    byId('new-product').hidden = false;
   }
 
   function syncNewCategory() {
@@ -899,6 +937,81 @@
     });
   }
 
+  /* Excel import */
+
+  var XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  var importFile = null;
+
+  function importRequest(mode) {
+    return api('/api/admin/import/' + mode, {
+      method: 'POST',
+      headers: { 'Content-Type': XLSX_TYPE },
+      body: importFile
+    });
+  }
+
+  function closeImport() {
+    importFile = null;
+    byId('import-panel').hidden = true;
+    byId('import-excel').value = '';
+  }
+
+  function plural(count, one, many) { return count + ' ' + (count === 1 ? one : many); }
+
+  function showImportResult(result, summary) {
+    var errors = byId('import-errors');
+    var changes = byId('import-changes');
+    errors.hidden = result.errorCount === 0;
+    errors.replaceChildren.apply(errors, result.errors.map(function (error) {
+      return el('li', '', 'Fila ' + error.row + ': ' + error.message);
+    }));
+    changes.hidden = result.changeCount === 0 || result.errorCount > 0;
+    changes.replaceChildren.apply(changes, result.changes.map(function (change) { return el('li', '', change); }));
+    byId('import-summary').textContent = summary;
+    byId('import-warning').hidden = !result.changes.some(function (change) { return change.indexOf(': stock ') >= 0; }) || result.applied;
+    byId('import-apply').hidden = result.applied || result.errorCount > 0 || result.changeCount === 0;
+    byId('import-panel').hidden = false;
+  }
+
+  function showImportMessage(message) {
+    showImportResult({ errors: [], errorCount: 0, changes: [], changeCount: 0, applied: false }, message);
+  }
+
+  function previewImport(file) {
+    importFile = file;
+    showImportMessage('Revisando ' + file.name + '…');
+    importRequest('preview').then(function (result) {
+      var summary;
+      if (result.errorCount) summary = plural(result.errorCount, 'error', 'errores') + ' en el archivo. Corrígelos y vuelve a importarlo; no se aplicó nada.';
+      else if (!result.changeCount) summary = 'El archivo no tiene cambios (' + plural(result.rows, 'fila', 'filas') + ').';
+      else summary = plural(result.changeCount, 'cambio', 'cambios') + ' por aplicar. Revísalos antes de confirmar.';
+      showImportResult(result, summary);
+    }).catch(function (error) {
+      if (error.status === 401) return showLogin('Tu sesión expiró.');
+      showImportMessage(error.message);
+    });
+  }
+
+  function applyImport() {
+    var applyButton = byId('import-apply');
+    applyButton.disabled = true;
+    importRequest('apply').then(function (result) {
+      if (result.applied) {
+        showImportResult(result, 'Listo: ' + plural(result.changeCount, 'cambio aplicado', 'cambios aplicados') + '.');
+        importFile = null;
+        byId('import-excel').value = '';
+        return loadProducts();
+      }
+      // The data changed after the preview; nothing was saved.
+      showImportResult(result, 'No se aplicó nada: ' + plural(result.errorCount, 'error', 'errores') + ' en el archivo.');
+    }).catch(function (error) {
+      if (error.status === 401) return showLogin('Tu sesión expiró.');
+      showImportMessage(error.message);
+    }).finally(function () {
+      applyButton.disabled = false;
+    });
+  }
+
   /* Events */
 
   byId('login').addEventListener('submit', function (event) {
@@ -927,6 +1040,11 @@
     });
   });
 
+  byId('import-excel').addEventListener('change', function (event) {
+    if (event.target.files[0]) previewImport(event.target.files[0]);
+  });
+  byId('import-apply').addEventListener('click', applyImport);
+  byId('import-cancel').addEventListener('click', closeImport);
   byId('new-product').addEventListener('click', openNewForm);
   byId('new-cancel').addEventListener('click', closeNewForm);
   byId('new-category').addEventListener('change', syncNewCategory);

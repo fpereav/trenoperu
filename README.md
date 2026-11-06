@@ -19,6 +19,10 @@ DATABASE_URL=... ADMIN_PASSWORD=... ADMIN_SESSION_SECRET=... .venv/bin/python sc
 
 `scripts/migrate.py` aplica `db/schema.sql`; se puede ejecutar más de una vez.
 
+## Excel
+
+En `/admin`, sección Productos: **Exportar Excel** descarga los productos y **Importar Excel** muestra los cambios antes de aplicarlos. Si hay errores no se aplica nada. El importe no elimina productos ni fotos.
+
 ## Imágenes
 
 Van en `public/assets/img/`, con los nombres de la columna `image` de `db/schema.sql` y los que usa `public/index.html`.

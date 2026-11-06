@@ -56,8 +56,23 @@
           <option value="out">Sin stock (ocultos)</option>
         </select>
         <span id="product-count" class="toolbar__count"></span>
-        <button id="new-product" class="btn btn--primary toolbar__end" type="button">+ Nuevo producto</button>
+        <div class="toolbar__end toolbar__actions">
+          <a id="export-excel" class="btn" href="/api/admin/export">Exportar Excel</a>
+          <label class="btn file-btn">Importar Excel<input id="import-excel" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
+          <button id="new-product" class="btn btn--primary" type="button">+ Nuevo producto</button>
+        </div>
       </div>
+      <section id="import-panel" class="import-panel" aria-labelledby="import-title" hidden>
+        <h2 id="import-title" class="panel__title">Importar Excel</h2>
+        <p id="import-summary" class="import-panel__summary" role="status"></p>
+        <p id="import-warning" class="import-panel__warning" hidden>El stock del archivo reemplazará al actual. Si hubo ventas desde que lo exportaste, exporta de nuevo antes de aplicar.</p>
+        <ul id="import-errors" class="import-list import-list--errors" hidden></ul>
+        <ul id="import-changes" class="import-list" hidden></ul>
+        <div class="new-form__actions">
+          <button id="import-apply" class="btn btn--primary" type="button" hidden>Aplicar cambios</button>
+          <button id="import-cancel" class="btn" type="button">Cerrar</button>
+        </div>
+      </section>
       <form id="new-form" class="new-form" hidden>
         <h2 class="panel__title">Nuevo producto</h2>
         <div class="new-form__grid">

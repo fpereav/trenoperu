@@ -90,3 +90,31 @@ INSERT INTO products (id, name, category, price_cents, image, colors, stock, top
   ('TRXSIN', 'TRX entrenamiento en suspensión', 'Funcional', 15900, 'trx.jpg', '["amarillo"]', 4, false, 12),
   ('GUAPLA', 'Guantes de box 14 oz', 'Box', 19900, 'guantes-box.jpg', '["rojo","negro"]', 4, false, 13)
 ON CONFLICT (id) DO NOTHING;
+
+-- One-time data changes, so editing or clearing the result later is respected.
+CREATE TABLE IF NOT EXISTS data_migrations (
+  name       text PRIMARY KEY,
+  applied_at timestamptz NOT NULL DEFAULT now()
+);
+
+UPDATE products SET description = CASE id
+  WHEN 'PACKCH' THEN 'Pack con chaleco lastrado de 10 kg y tobilleras de 1 kg, ajustables, para sumar resistencia a tus entrenamientos.'
+  WHEN 'KETPVC' THEN 'Pesa rusa de PVC de 4 kg para ejercicios de fuerza y resistencia en casa.'
+  WHEN 'MANVIN' THEN 'Mancuerna de vinilo de 1 kg para tonificar brazos y hombros.'
+  WHEN 'MATGOM' THEN 'Mat de goma EVA de 8 mm para yoga, estiramientos y ejercicios en el piso.'
+  WHEN 'TOBPLA' THEN 'Tobillera con peso para añadir resistencia a tus ejercicios de piernas y caminatas.'
+  WHEN 'BANLAT' THEN 'Set de 5 bandas de látex de colores para ejercicios de fuerza y tonificación.'
+  WHEN 'SOGPVC' THEN 'Soga para saltar de PVC de 2.75 m para cardio y coordinación.'
+  WHEN 'CHASIN' THEN 'Chaleco con peso para aumentar la intensidad de tus entrenamientos.'
+  WHEN 'ROLPVC' THEN 'Roller de PVC para masaje y recuperación muscular después de entrenar.'
+  WHEN 'PESHIE' THEN 'Pesa rusa de hierro de 12 kg para entrenamientos de fuerza y ejercicios funcionales.'
+  WHEN 'MANCAU' THEN 'Mancuerna hexagonal de caucho de 2 kg. Su forma evita que ruede en el piso.'
+  WHEN 'STEPVC' THEN 'Step de PVC con 2 niveles de altura para ejercicios de cardio y tonificación.'
+  WHEN 'TRXSIN' THEN 'Sistema de entrenamiento en suspensión para ejercitar todo el cuerpo con tu propio peso.'
+  WHEN 'GUAPLA' THEN 'Guantes de box de 14 oz para entrenar golpes en saco y mitts.'
+END
+WHERE description = ''
+  AND id IN ('PACKCH', 'KETPVC', 'MANVIN', 'MATGOM', 'TOBPLA', 'BANLAT', 'SOGPVC', 'CHASIN', 'ROLPVC', 'PESHIE', 'MANCAU', 'STEPVC', 'TRXSIN', 'GUAPLA')
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'default_descriptions');
+
+INSERT INTO data_migrations (name) VALUES ('default_descriptions') ON CONFLICT (name) DO NOTHING;
