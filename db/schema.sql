@@ -118,3 +118,32 @@ WHERE description = ''
   AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'default_descriptions');
 
 INSERT INTO data_migrations (name) VALUES ('default_descriptions') ON CONFLICT (name) DO NOTHING;
+
+-- One-time load of kettlebell options from the kardex, only if a product has none yet.
+INSERT INTO product_variants (product_id, label, price_cents, discount_cents, stock)
+SELECT 'KETPVC', o.label, o.price, 0, o.stock
+FROM (VALUES (1, '2 kg', 5900, 3), (2, '4 kg', 5900, 4), (3, '5 kg', 6900, 6), (4, '6 kg', 7900, 2),
+             (5, '8 kg', 10900, 2), (6, '10 kg', 12900, 2), (7, '12 kg', 15600, 1)) AS o (position, label, price, stock)
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'kettlebell_options')
+  AND NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = 'KETPVC')
+ORDER BY o.position;
+
+INSERT INTO product_variants (product_id, label, price_cents, discount_cents, stock)
+SELECT 'PESHIE', o.label, o.price, 0, o.stock
+FROM (VALUES (1, '8 kg', 8000, 0), (2, '10 kg', 10000, 3), (3, '12 kg', 12000, 1), (4, '14 kg', 14000, 2),
+             (5, '16 kg', 16000, 3), (6, '20 kg', 20000, 2)) AS o (position, label, price, stock)
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'kettlebell_options')
+  AND NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = 'PESHIE')
+ORDER BY o.position;
+
+UPDATE products SET name = 'Kettlebell PVC',
+  description = 'Pesa rusa de PVC para ejercicios de fuerza y resistencia en casa.'
+WHERE id = 'KETPVC' AND name = 'Kettlebell PVC 4 kg'
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'kettlebell_options');
+
+UPDATE products SET name = 'Pesa rusa de hierro',
+  description = 'Pesa rusa de hierro para entrenamientos de fuerza y ejercicios funcionales.'
+WHERE id = 'PESHIE' AND name = 'Pesa rusa hierro 12 kg'
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'kettlebell_options');
+
+INSERT INTO data_migrations (name) VALUES ('kettlebell_options') ON CONFLICT (name) DO NOTHING;
