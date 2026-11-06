@@ -3,6 +3,7 @@
 
   var ACCENT = '#FF4670';
   var IMG = 'assets/img/';
+  var PACK_ID = 'PACKCH';
   var CART_KEY = 'treno.cart';
   var FAVS_KEY = 'treno.favs';
 
@@ -12,7 +13,7 @@
     fucsia: ['Fucsia', '#E0197D'], marino: ['Azul marino', '#1F2F5C'], azul: ['Azul', '#2F6FD1'],
     celeste: ['Celeste', '#6EC6E8'], naranja: ['Naranja', '#F28C28'], amarillo: ['Amarillo', '#F2C94C']
   };
-  var CATEGORIES = ['Todo', 'Pesas', 'Yoga', 'Cardio', 'Resistencia', 'Accesorios', 'Funcional', 'Box', 'Recuperación'];
+  var CATEGORIES = ['Todo', 'Packs', 'Pesas', 'Yoga', 'Cardio', 'Resistencia', 'Accesorios', 'Funcional', 'Box', 'Recuperación'];
   var PRICE_RANGES = { low: [0, 70], mid: [70, 150], high: [150, Infinity] };
   var HEART = 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z';
   var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -224,6 +225,11 @@
     byId('empty').hidden = state.loadError || !products.length || list.length !== 0;
     byId('load-error').hidden = !state.loadError;
 
+    var pack = products.find(function (p) { return p.id === PACK_ID; });
+    var heroAdd = byId('hero-add');
+    heroAdd.disabled = !pack || !pack.inStock;
+    heroAdd.textContent = pack && !pack.inStock ? 'Agotado' : 'Agregar al carrito';
+
     var favCount = Object.keys(state.favs).length;
     var favBadge = byId('fav-badge');
     favBadge.hidden = favCount === 0;
@@ -382,6 +388,10 @@
       openCart();
     });
     byId('cart-close').addEventListener('click', function () { byId('cart').close(); });
+    byId('hero-add').addEventListener('click', function () {
+      var pack = products.find(function (p) { return p.id === PACK_ID; });
+      if (pack && pack.inStock) addToCart(pack);
+    });
     byId('checkout').addEventListener('submit', submitOrder);
     document.querySelectorAll('[data-price]').forEach(function (box) {
       box.addEventListener('change', function () {
@@ -391,7 +401,10 @@
       });
     });
     document.querySelectorAll('[data-cat-link]').forEach(function (link) {
-      link.addEventListener('click', function () { clearFilters(); });
+      link.addEventListener('click', function () {
+        clearFilters();
+        setState({ cat: link.dataset.catLink });
+      });
     });
     document.querySelectorAll('img[data-optional]').forEach(function (img) {
       function hide() { img.hidden = true; }

@@ -110,6 +110,9 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__text .hero__price { color: var(--accent); font-size: clamp(64px, 8vw, 104px); }
 .hero__cta { border-color: var(--accent); background: var(--accent); color: var(--ink); text-align: center; }
 .hero__cta:hover { border-color: #ffffff; background: #ffffff; color: var(--ink); }
+.hero__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hero__whatsapp { border-color: #ffffff; background: transparent; color: #ffffff; text-align: center; }
+.hero__whatsapp:hover { border-color: #ffffff; background: #ffffff; color: var(--ink); }
 .hero__phone { font-size: 14px; }
 .hero__phone:hover { color: #ffffff; }
 

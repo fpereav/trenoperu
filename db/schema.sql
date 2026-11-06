@@ -41,6 +41,7 @@ CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON order_items (order_id);
 
 -- Initial catalog. ON CONFLICT keeps current stock and prices when re-run.
 INSERT INTO products (id, name, category, price_cents, image, colors, stock, top, sort_order) VALUES
+  ('PACKCH', 'Pack chaleco 10 kg + tobilleras 1 kg', 'Packs', 6900, 'pack-chaleco-tobilleras.jpg', '["negro"]', 8, false, 0),
   ('KETPVC', 'Kettlebell PVC 4 kg', 'Pesas', 5900, 'kettlebell-pvc.jpg', '["rosado","negro","rojo"]', 4, true, 1),
   ('MANVIN', 'Mancuerna vinilo 1 kg', 'Pesas', 6900, 'mancuerna-vinilo.jpg', '["rosado","morado","rojo"]', 4, true, 2),
   ('MATGOM', 'Mat goma EVA 8 mm', 'Yoga', 6900, 'mat-goma-eva.jpg', '["rosado","fucsia","plomo","verde","marino"]', 6, false, 3),
