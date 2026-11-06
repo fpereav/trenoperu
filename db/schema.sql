@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS products (
 );
 
 ALTER TABLE products ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT '';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_cents integer NOT NULL DEFAULT 0 CHECK (discount_cents >= 0);
 
 -- Photos uploaded in the admin panel. slot is 'principal' or a product color.
 CREATE TABLE IF NOT EXISTS product_images (

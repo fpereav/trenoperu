@@ -67,6 +67,10 @@ def rows(conn, sql, **params):
     return [dict(zip(names, row)) for row in result]
 
 
+def discount_percent(price_cents, discount_cents):
+    return round(discount_cents * 100 / price_cents, 2) if price_cents else 0
+
+
 def uploaded_photos(conn):
     photos = {}
     for row in rows(conn, "SELECT id, product_id, slot FROM product_images ORDER BY id"):
@@ -80,7 +84,7 @@ def list_products():
     try:
         products = rows(
             conn,
-            "SELECT id, name, description, category, price_cents, image, colors, stock, top "
+            "SELECT id, name, description, category, price_cents, discount_cents, image, colors, stock, top "
             "FROM products WHERE stock > 0 ORDER BY sort_order",
         )
         photos = uploaded_photos(conn)
@@ -92,7 +96,9 @@ def list_products():
             "name": p["name"],
             "description": p["description"],
             "cat": p["category"],
-            "price": p["price_cents"] / 100,
+            "price": (p["price_cents"] - p["discount_cents"]) / 100,
+            "listPrice": p["price_cents"] / 100,
+            "discountPercent": discount_percent(p["price_cents"], p["discount_cents"]),
             "img": p["image"],
             "photos": photos.get(p["id"], {}),
             "colors": p["colors"],
@@ -166,13 +172,15 @@ def create_order(payload, client_ip):
         for product_id in sorted(quantities):
             found = rows(
                 conn,
-                "SELECT id, name, price_cents, colors, stock FROM products "
+                "SELECT id, name, price_cents, discount_cents, colors, stock FROM products "
                 "WHERE id = :id FOR UPDATE",
                 id=product_id,
             )
             if not found:
                 raise ApiError(409, "Uno de los productos ya no está disponible.")
             product = found[0]
+            # Customers pay the discounted price, whatever the browser sent.
+            product["price_cents"] -= product["discount_cents"]
             if product["stock"] < quantities[product_id]:
                 raise ApiError(409, "No hay stock suficiente de " + product["name"] + ".")
             products[product_id] = product
@@ -286,7 +294,7 @@ def admin_products():
     try:
         products = rows(
             conn,
-            "SELECT id, name, description, category, price_cents, stock, image, colors "
+            "SELECT id, name, description, category, price_cents, discount_cents, stock, image, colors "
             "FROM products ORDER BY sort_order",
         )
         photos = uploaded_photos(conn)
@@ -294,7 +302,8 @@ def admin_products():
         conn.close()
     return [
         {"id": p["id"], "name": p["name"], "description": p["description"], "cat": p["category"],
-         "price": p["price_cents"] / 100, "stock": p["stock"], "img": p["image"],
+         "price": p["price_cents"] / 100, "discount": p["discount_cents"] / 100,
+         "stock": p["stock"], "img": p["image"],
          "colors": p["colors"], "photos": photos.get(p["id"], {})}
         for p in products
     ]
@@ -330,6 +339,15 @@ def clean_price_cents(value):
     return cents
 
 
+def clean_discount_cents(value, price_cents):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ApiError(400, "Escribe un descuento válido.")
+    cents = round(value * 100)
+    if not 0 <= cents < price_cents:
+        raise ApiError(400, "El descuento debe ser menor que el precio.")
+    return cents
+
+
 def clean_colors(colors):
     if not isinstance(colors, list) or not all(isinstance(c, str) for c in colors):
         raise ApiError(400, "Revisa los colores.")
@@ -350,6 +368,7 @@ def create_product(payload):
     name, description = clean_product_text(payload)
     category = clean_category(payload.get("category"))
     price_cents = clean_price_cents(payload.get("price"))
+    discount_cents = clean_discount_cents(payload.get("discount", 0), price_cents)
     stock = clean_stock(payload.get("stock"))
     colors = clean_colors(payload.get("colors"))
     product_id = "P" + secrets.token_hex(5).upper()
@@ -357,15 +376,16 @@ def create_product(payload):
     try:
         rows_found = rows(
             conn,
-            "INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, sort_order) "
-            "SELECT :id, :name, :description, :category, :price, '', CAST(:colors AS jsonb), :stock, "
+            "INSERT INTO products (id, name, description, category, price_cents, discount_cents, image, colors, stock, sort_order) "
+            "SELECT :id, :name, :description, :category, :price, :discount, '', CAST(:colors AS jsonb), :stock, "
             "coalesce(max(sort_order), 0) + 1 FROM products "
-            "RETURNING id, name, description, category, price_cents, stock, image, colors",
+            "RETURNING id, name, description, category, price_cents, discount_cents, stock, image, colors",
             id=product_id,
             name=name,
             description=description,
             category=category,
             price=price_cents,
+            discount=discount_cents,
             colors=json.dumps(colors),
             stock=stock,
         )
@@ -373,7 +393,8 @@ def create_product(payload):
         conn.close()
     p = rows_found[0]
     return {"id": p["id"], "name": p["name"], "description": p["description"], "cat": p["category"],
-            "price": p["price_cents"] / 100, "stock": p["stock"], "img": p["image"],
+            "price": p["price_cents"] / 100, "discount": p["discount_cents"] / 100,
+            "stock": p["stock"], "img": p["image"],
             "colors": p["colors"], "photos": {}}
 
 
@@ -381,23 +402,29 @@ def set_product_details(product_id, payload):
     name, description = clean_product_text(payload)
     conn = connect()
     try:
-        found = rows(conn, "SELECT category, price_cents FROM products WHERE id = :id", id=product_id)
+        found = rows(conn, "SELECT category, price_cents, discount_cents FROM products WHERE id = :id", id=product_id)
         if not found:
             raise ApiError(404, "Producto no encontrado.")
         category = clean_category(payload["category"]) if "category" in payload else found[0]["category"]
         price_cents = clean_price_cents(payload["price"]) if "price" in payload else found[0]["price_cents"]
+        discount_cents = clean_discount_cents(
+            payload["discount"] if "discount" in payload else found[0]["discount_cents"] / 100,
+            price_cents,
+        )
         conn.run(
             "UPDATE products SET name = :name, description = :description, category = :category, "
-            "price_cents = :price WHERE id = :id",
+            "price_cents = :price, discount_cents = :discount WHERE id = :id",
             name=name,
             description=description,
             category=category,
             price=price_cents,
+            discount=discount_cents,
             id=product_id,
         )
     finally:
         conn.close()
-    return {"id": product_id, "name": name, "description": description, "cat": category, "price": price_cents / 100}
+    return {"id": product_id, "name": name, "description": description, "cat": category,
+            "price": price_cents / 100, "discount": discount_cents / 100}
 
 
 def product_colors(conn, product_id):
@@ -518,7 +545,7 @@ def product_for_page(product_id):
     try:
         found = rows(
             conn,
-            "SELECT id, name, description, category, price_cents, image, colors FROM products "
+            "SELECT id, name, description, category, price_cents, discount_cents, image, colors FROM products "
             "WHERE id = :id AND stock > 0",
             id=product_id,
         )
@@ -542,7 +569,14 @@ def product_page(product_id):
         return None
     url = f"{SITE_URL}/producto/{product['id']}"
     name = product["name"]
-    price = f"{product['price_cents'] / 100:.2f}"
+    price = f"{(product['price_cents'] - product['discount_cents']) / 100:.2f}"
+    was = ""
+    if product["discount_cents"]:
+        percent = discount_percent(product["price_cents"], product["discount_cents"])
+        was = (
+            f'<s class="price-was">S/ {product["price_cents"] / 100:.2f}</s> '
+            f'<span class="price-off">-{percent:g}%</span>'
+        )
     summary = product["description"] or f"{name} en TRENO Perú. Delivery a todo el Perú."
     data = {
         "@context": "https://schema.org",
@@ -597,7 +631,7 @@ def product_page(product_id):
 <div class="product__info">
 <h1 class="display">{esc(name)}</h1>
 <div class="card__meta">{esc(product["category"])}</div>
-<div class="product__price">S/ {price}</div>
+<div class="product__price">S/ {price} {was}</div>
 {description_tag}
 <a class="button" href="/#producto/{esc(product["id"])}">Comprar</a>
 <a href="/">Ver todo el catálogo</a>

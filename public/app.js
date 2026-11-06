@@ -205,7 +205,7 @@
     card.appendChild(title);
     if (p.description) card.appendChild(el('p', 'card__description', p.description));
     card.appendChild(el('div', 'card__meta', p.cat + ' · ' + COLORS[color][0]));
-    card.appendChild(el('div', 'card__price', money(p.price)));
+    card.appendChild(fillPrice(el('div', 'card__price'), p));
 
     var swatches = el('div', 'swatches');
     p.colors.forEach(function (key) {
@@ -227,6 +227,19 @@
     add.setAttribute('aria-label', (p.inStock ? 'Agregar al carrito: ' : 'Agotado: ') + p.name);
     card.appendChild(add);
     return card;
+  }
+
+  // Current price, plus the previous one crossed out when there is a discount.
+  function fillPrice(node, p) {
+    var nodes = [document.createTextNode(money(p.price))];
+    if (p.discountPercent > 0) {
+      nodes.push(document.createTextNode(' '));
+      nodes.push(el('s', 'price-was', money(p.listPrice)));
+      nodes.push(document.createTextNode(' '));
+      nodes.push(el('span', 'price-off', '-' + Number(p.discountPercent.toFixed(2)) + '%'));
+    }
+    fill(node, nodes);
+    return node;
   }
 
   function selectColor(p, color) {
@@ -268,7 +281,7 @@
 
     byId('product-name').textContent = p.name;
     byId('product-meta').textContent = p.cat + ' · ' + COLORS[color][0];
-    byId('product-price').textContent = money(p.price);
+    fillPrice(byId('product-price'), p);
     var description = byId('product-description');
     description.textContent = p.description;
     description.hidden = !p.description;

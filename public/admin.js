@@ -54,6 +54,44 @@
     return { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) };
   }
 
+  /* Discounts */
+
+  function roundMoney(value) { return Math.round(value * 100) / 100; }
+
+  // Keeps percent, amount and final price in step. Empty discount fields mean no discount.
+  function bindDiscount(priceInput, percentInput, amountInput, finalOutput, onChange) {
+    function refresh() {
+      var price = Number(priceInput.value);
+      var amount = Number(amountInput.value) || 0;
+      var valid = price > 0 && amount >= 0 && roundMoney(amount) < price;
+      finalOutput.textContent = valid ? money(roundMoney(price - amount))
+        : price > 0 ? 'El descuento debe ser menor que el precio' : '—';
+      finalOutput.classList.toggle('is-invalid', price > 0 && !valid);
+      if (onChange) onChange(valid);
+    }
+    function fromPercent() {
+      var price = Number(priceInput.value);
+      amountInput.value = percentInput.value === '' ? '' : roundMoney(price * Number(percentInput.value) / 100).toFixed(2);
+    }
+    percentInput.addEventListener('input', function () {
+      fromPercent();
+      refresh();
+    });
+    amountInput.addEventListener('input', function () {
+      var price = Number(priceInput.value);
+      percentInput.value = amountInput.value === '' || !(price > 0) ? ''
+        : String(roundMoney(Number(amountInput.value) * 100 / price));
+      refresh();
+    });
+    // A new price keeps the same percentage.
+    priceInput.addEventListener('input', function () {
+      if (percentInput.value !== '') fromPercent();
+      refresh();
+    });
+    refresh();
+    return refresh;
+  }
+
   /* Session and navigation */
 
   function showLogin(message) {
@@ -418,7 +456,36 @@
     price.value = product.price.toFixed(2);
     price.setAttribute('aria-label', 'Precio de ' + product.name);
     priceLabel.appendChild(price);
-    fields.appendChild(priceLabel);
+
+    var priceGrid = el('div', 'price-grid');
+    priceGrid.appendChild(priceLabel);
+    var finalBox = el('div', 'final-price', 'Precio final');
+    var finalOutput = el('output');
+    finalOutput.setAttribute('aria-label', 'Precio final de ' + product.name);
+    finalBox.appendChild(finalOutput);
+    priceGrid.appendChild(finalBox);
+    var percentLabel = el('label', 'field', 'Descuento (%)');
+    var percent = el('input', 'input');
+    percent.type = 'number';
+    percent.min = '0';
+    percent.max = '99.99';
+    percent.step = '0.01';
+    percent.placeholder = '0';
+    percent.value = product.discount > 0 ? String(roundMoney(product.discount * 100 / product.price)) : '';
+    percent.setAttribute('aria-label', 'Descuento en porcentaje de ' + product.name);
+    percentLabel.appendChild(percent);
+    priceGrid.appendChild(percentLabel);
+    var amountLabel = el('label', 'field', 'Descuento (S/)');
+    var amount = el('input', 'input');
+    amount.type = 'number';
+    amount.min = '0';
+    amount.step = '0.01';
+    amount.placeholder = '0.00';
+    amount.value = product.discount > 0 ? product.discount.toFixed(2) : '';
+    amount.setAttribute('aria-label', 'Descuento en soles de ' + product.name);
+    amountLabel.appendChild(amount);
+    priceGrid.appendChild(amountLabel);
+    fields.appendChild(priceGrid);
     var categoryLabel = el('label', 'field', 'Categoría');
     var category = el('input', 'input');
     category.type = 'text';
@@ -442,12 +509,14 @@
         name: name.value,
         description: description.value,
         category: category.value,
-        price: Number(price.value)
+        price: Number(price.value),
+        discount: Number(amount.value) || 0
       })).then(function (body) {
         product.name = body.name;
         product.description = body.description;
         product.cat = body.cat;
         product.price = body.price;
+        product.discount = body.discount;
         refreshRow(product, row, 'Información guardada.');
       }).catch(function (error) {
         save.disabled = false;
@@ -456,10 +525,16 @@
     });
     save.disabled = true;
     function detailsChanged() {
-      save.disabled = name.value === product.name && description.value === product.description &&
-        category.value === product.cat && Number(price.value) === product.price;
+      var unchanged = name.value === product.name && description.value === product.description &&
+        category.value === product.cat && Number(price.value) === product.price &&
+        roundMoney(Number(amount.value) || 0) === product.discount;
+      save.disabled = unchanged || !discountValid;
     }
-    price.addEventListener('input', detailsChanged);
+    var discountValid = true;
+    bindDiscount(price, percent, amount, finalOutput, function (valid) {
+      discountValid = valid;
+      if (save) detailsChanged();
+    });
     category.addEventListener('input', detailsChanged);
     name.addEventListener('input', detailsChanged);
     description.addEventListener('input', detailsChanged);
@@ -509,7 +584,14 @@
     info.appendChild(meta);
     top.appendChild(info);
 
-    top.appendChild(el('div', 'product__price', money(product.price)));
+    var priceBox = el('div', 'product__price', money(roundMoney(product.price - product.discount)));
+    if (product.discount > 0) {
+      priceBox.appendChild(document.createElement('br'));
+      priceBox.appendChild(el('s', 'price-was', money(product.price)));
+      priceBox.appendChild(document.createTextNode(' '));
+      priceBox.appendChild(el('span', 'price-off', '-' + roundMoney(product.discount * 100 / product.price) + '%'));
+    }
+    top.appendChild(priceBox);
 
     var stockBox = el('div', 'product__stock');
     var stock = el('input', 'input');
@@ -589,6 +671,8 @@
 
   var NEW_CATEGORY = '__nueva__';
 
+  var refreshNewFinal = bindDiscount(byId('new-price'), byId('new-discount-percent'), byId('new-discount-amount'), byId('new-final'));
+
   function openNewForm() {
     var form = byId('new-form');
     form.reset();
@@ -607,6 +691,8 @@
       return option;
     })()]));
     syncNewCategory();
+
+    refreshNewFinal();
 
     byId('new-colors').replaceChildren.apply(byId('new-colors'), Object.keys(COLOR_LIST).map(function (color) {
       var choice = el('label', 'color-choice');
@@ -657,6 +743,7 @@
       description: byId('new-description').value,
       category: select.value === NEW_CATEGORY ? byId('new-category-name').value : select.value,
       price: Number(byId('new-price').value),
+      discount: Number(byId('new-discount-amount').value) || 0,
       stock: Number(byId('new-stock').value),
       colors: colors
     })).then(function (product) {

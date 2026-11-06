@@ -66,6 +66,9 @@
           <label id="new-category-other" class="field" hidden>Nueva categoría<input id="new-category-name" class="input" type="text" maxlength="40"></label>
           <label class="field">Precio (S/)<input id="new-price" class="input" type="number" min="0.01" max="100000" step="0.01" required></label>
           <label class="field">Stock<input id="new-stock" class="input" type="number" min="0" max="100000" step="1" required></label>
+          <label class="field">Descuento (%)<input id="new-discount-percent" class="input" type="number" min="0" max="99.99" step="0.01" placeholder="0"></label>
+          <label class="field">Descuento (S/)<input id="new-discount-amount" class="input" type="number" min="0" step="0.01" placeholder="0.00"></label>
+          <div class="final-price">Precio final<output id="new-final">—</output></div>
           <label class="field new-form__wide">Descripción (opcional)<textarea id="new-description" class="textarea" rows="3" maxlength="500" placeholder="Medidas, material y uso del producto"></textarea></label>
           <fieldset class="new-form__colors new-form__wide">
             <legend>Colores</legend>
