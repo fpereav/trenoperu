@@ -817,19 +817,67 @@
     return row;
   }
 
+  function hasDiscount(product) {
+    return product.variants.length
+      ? product.variants.some(function (variant) { return variant.discount > 0; })
+      : product.discount > 0;
+  }
+
+  function fillProductFilters() {
+    var select = byId('filter-category');
+    var selected = select.value;
+    var options = [select.options[0]].concat(allCategories().map(function (name) {
+      var option = el('option', '', name);
+      option.value = name;
+      return option;
+    }));
+    select.replaceChildren.apply(select, options);
+    select.value = selected;
+    // A category with no products left falls back to "Todas".
+    if (select.selectedIndex < 0) select.value = '';
+
+    var colors = byId('filter-color');
+    if (colors.options.length === 1) {
+      Object.keys(COLOR_LIST).forEach(function (color) {
+        var option = el('option', '', COLOR_LIST[color][0]);
+        option.value = color;
+        colors.appendChild(option);
+      });
+    }
+  }
+
   function renderProducts() {
     var query = normalize(byId('product-search').value.trim());
-    var filter = byId('product-filter').value;
+    var stockFilter = byId('product-filter').value;
+    var category = byId('filter-category').value;
+    var color = byId('filter-color').value;
+    var discount = byId('filter-discount').value;
+    var variants = byId('filter-variants').value;
     var shown = products.filter(function (product) {
       var total = totalStock(product);
-      if (filter === 'out' && total !== 0) return false;
-      if (filter === 'low' && (total === 0 || total > LOW_STOCK)) return false;
+      if (stockFilter === 'in' && total === 0) return false;
+      if (stockFilter === 'out' && total !== 0) return false;
+      if (stockFilter === 'low' && (total === 0 || total > LOW_STOCK)) return false;
+      if (category && product.cat !== category) return false;
+      if (color && product.colors.indexOf(color) < 0) return false;
+      if (discount === 'yes' && !hasDiscount(product)) return false;
+      if (discount === 'no' && hasDiscount(product)) return false;
+      if (variants === 'yes' && !product.variants.length) return false;
+      if (variants === 'no' && product.variants.length) return false;
       return !query || normalize(product.name + ' ' + product.cat).indexOf(query) >= 0;
     });
+    byId('clear-product-filters').hidden = !(query || stockFilter || category || color || discount || variants);
     byId('product-count').textContent = shown.length + (shown.length === 1 ? ' producto' : ' productos');
     byId('products-none').hidden = shown.length > 0;
     byId('stock-rows').hidden = shown.length === 0;
     byId('stock-rows').replaceChildren.apply(byId('stock-rows'), shown.map(productRow));
+  }
+
+  function clearProductFilters() {
+    byId('product-search').value = '';
+    ['product-filter', 'filter-category', 'filter-color', 'filter-discount', 'filter-variants'].forEach(function (id) {
+      byId(id).value = '';
+    });
   }
 
   function loadProducts() {
@@ -837,6 +885,7 @@
     box.hidden = true;
     return api('/api/admin/products').then(function (list) {
       products = list;
+      fillProductFilters();
       renderProducts();
     }).catch(function (error) {
       if (error.status === 401) return showLogin('Tu sesión expiró.');
@@ -922,8 +971,8 @@
       closeNewForm();
       products.push(product);
       openProducts[product.id] = true;
-      byId('product-search').value = '';
-      byId('product-filter').value = '';
+      clearProductFilters();
+      fillProductFilters();
       renderProducts();
       var row = document.querySelector('.product[data-product="' + product.id + '"]');
       setStatus(row, 'Producto creado. Ahora agrega sus fotos.');
@@ -1051,7 +1100,13 @@
   byId('new-form').addEventListener('submit', submitNewProduct);
   byId('order-search').addEventListener('input', renderOrders);
   byId('product-search').addEventListener('input', renderProducts);
-  byId('product-filter').addEventListener('change', renderProducts);
+  ['product-filter', 'filter-category', 'filter-color', 'filter-discount', 'filter-variants'].forEach(function (id) {
+    byId(id).addEventListener('change', renderProducts);
+  });
+  byId('clear-product-filters').addEventListener('click', function () {
+    clearProductFilters();
+    renderProducts();
+  });
   byId('tab-orders').addEventListener('click', function () { showTab('orders'); });
   byId('tab-stock').addEventListener('click', function () { showTab('stock'); });
 

@@ -121,6 +121,11 @@ a { color: inherit; }
 
 .category-picker { display: flex; flex-direction: column; gap: 8px; }
 
+/* Product filters */
+.filters-bar { display: grid; grid-template-columns: minmax(180px, 1.6fr) repeat(5, minmax(120px, 1fr)); align-items: end; gap: 10px 12px; margin-bottom: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
+.filters-bar .link { justify-self: start; }
+.filters-bar .toolbar__count { grid-column: -2 / -1; justify-self: end; }
+
 /* Excel */
 .toolbar__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .file-btn { position: relative; }
@@ -208,6 +213,8 @@ a { color: inherit; }
 .empty { padding: 32px; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; color: var(--muted); text-align: center; }
 
 @media (max-width: 900px) {
+  .filters-bar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .filters-bar__search { grid-column: 1 / -1; }
   .variant { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .variant__actions { grid-column: 1 / -1; }
   .order { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -215,6 +222,7 @@ a { color: inherit; }
 }
 
 @media (max-width: 600px) {
+  .filters-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .new-form__grid { grid-template-columns: minmax(0, 1fr); }
   .variant { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toolbar__end { width: 100%; margin-left: 0; }

@@ -47,20 +47,34 @@
     <section id="stock-panel" hidden>
       <h1 class="page-title">Productos</h1>
       <div class="toolbar">
-        <label class="visually-hidden" for="product-search">Buscar producto</label>
-        <input id="product-search" class="input" type="search" placeholder="Buscar producto">
-        <label class="visually-hidden" for="product-filter">Filtrar productos</label>
-        <select id="product-filter" class="select">
-          <option value="">Todos</option>
-          <option value="low">Stock bajo</option>
-          <option value="out">Sin stock (ocultos)</option>
-        </select>
-        <span id="product-count" class="toolbar__count"></span>
         <div class="toolbar__end toolbar__actions">
           <a id="export-excel" class="btn" href="/api/admin/export">Exportar Excel</a>
           <label class="btn file-btn">Importar Excel<input id="import-excel" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"></label>
           <button id="new-product" class="btn btn--primary" type="button">+ Nuevo producto</button>
         </div>
+      </div>
+      <div class="filters-bar" role="search" aria-label="Filtrar productos">
+        <label class="field filters-bar__search">Buscar<input id="product-search" class="input" type="search" placeholder="Nombre o categoría"></label>
+        <label class="field">Categoría<select id="filter-category" class="select"><option value="">Todas</option></select></label>
+        <label class="field">Color<select id="filter-color" class="select"><option value="">Todos</option></select></label>
+        <label class="field">Stock<select id="product-filter" class="select">
+          <option value="">Todos</option>
+          <option value="in">Con stock</option>
+          <option value="low">Stock bajo</option>
+          <option value="out">Sin stock (ocultos)</option>
+        </select></label>
+        <label class="field">Descuento<select id="filter-discount" class="select">
+          <option value="">Todos</option>
+          <option value="yes">Con descuento</option>
+          <option value="no">Sin descuento</option>
+        </select></label>
+        <label class="field">Presentaciones<select id="filter-variants" class="select">
+          <option value="">Todos</option>
+          <option value="yes">Con presentaciones</option>
+          <option value="no">Sin presentaciones</option>
+        </select></label>
+        <button id="clear-product-filters" class="link" type="button" hidden>Limpiar filtros</button>
+        <span id="product-count" class="toolbar__count"></span>
       </div>
       <section id="import-panel" class="import-panel" aria-labelledby="import-title" hidden>
         <h2 id="import-title" class="panel__title">Importar Excel</h2>
