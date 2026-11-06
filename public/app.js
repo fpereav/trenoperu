@@ -21,7 +21,7 @@
   var state = {
     cat: 'Todo', color: null, sort: 'rel', query: '', prices: {}, onlyFavs: false,
     favs: load(FAVS_KEY, {}), cart: load(CART_KEY, []), picked: {}, loadError: false,
-    detailId: null, detailPhoto: null, loaded: false, pickedVariants: {}, cartStep: 'items'
+    detailId: null, detailPhoto: null, loaded: false, pickedVariants: {}, cardColors: {}, cartStep: 'items'
   };
 
   function load(key, fallback) {
@@ -81,8 +81,13 @@
     return svg;
   }
 
-  function pickedColor(p) {
-    if (state.picked[p.id] && p.colors.indexOf(state.picked[p.id]) >= 0) return state.picked[p.id];
+  // In the catalog each option has its own card, so each remembers its own color.
+  function cardKey(p, variant) { return p.id + ':' + variant.id; }
+
+  function pickedColor(p, variant) {
+    var own = variant && state.cardColors[cardKey(p, variant)];
+    if (own && p.colors.indexOf(own) >= 0) return own;
+    if (!variant && state.picked[p.id] && p.colors.indexOf(state.picked[p.id]) >= 0) return state.picked[p.id];
     return state.color && p.colors.indexOf(state.color) >= 0 ? state.color : p.colors[0];
   }
 
@@ -91,9 +96,9 @@
     return variants.find(function (v) { return v.id === state.pickedVariants[p.id]; }) || variants[0] || null;
   }
 
-  function addToCart(p) {
-    var color = pickedColor(p);
-    var variant = pickedVariant(p);
+  function addToCart(p, chosenVariant, chosenColor) {
+    var color = chosenColor || pickedColor(p);
+    var variant = chosenVariant || pickedVariant(p);
     var cart = state.cart.slice();
     byId('cart-done').hidden = true;
     state.cartStep = 'items';
@@ -142,9 +147,9 @@
   }
 
   // Photo of the chosen presentation, when its weight has one. Uploaded color photos win.
-  function sizePhoto(p, color) {
+  function sizePhoto(p, color, chosenVariant) {
     var config = SIZE_IMAGES[p.id];
-    var variant = pickedVariant(p);
+    var variant = chosenVariant || pickedVariant(p);
     if (!config || !variant || config.colors.indexOf(color) < 0) return null;
     if (urlsOf((p.photos || {})[color]).length) return null;
     var match = /(\d+(?:[.,]\d+)?)\s*kg/i.exec(variant.label);
@@ -180,31 +185,35 @@
     return list.filter(function (src, index) { return list.indexOf(src) === index; });
   }
 
-  function productLink(p, className, child) {
+  function productLink(p, className, child, title) {
     var link = el('a', className);
     link.href = '/producto/' + p.id;
     link.dataset.product = p.id;
-    link.setAttribute('aria-label', 'Ver ' + p.name);
+    link.setAttribute('aria-label', 'Ver ' + title);
     link.appendChild(child);
     return link;
   }
 
-  function productTile(p) {
+  function productTile(p, variant, title) {
     var fav = !!state.favs[p.id];
     var tile = el('div', 'tile');
 
     var img = el('img');
-    var color = pickedColor(p);
-    var size = sizePhoto(p, color);
+    var color = pickedColor(p, variant);
+    var size = variant ? sizePhoto(p, color, variant) : null;
     var ownPhotos = size ? [size] : colorPhotos(p, color);
     img.src = ownPhotos[0] || generalPhotos(p)[0] || (p.img ? missingPhoto(p) : fallbackPhoto(p));
-    img.alt = p.name;
+    img.alt = title;
     img.loading = 'lazy';
     img.addEventListener('error', function () {
       img.parentNode.replaceChild(el('div', 'tile__empty', 'Foto próximamente'), img);
     });
-    tile.appendChild(productLink(p, 'tile__link', img));
-    if (hasColorPhotos(p) && !ownPhotos.length) tile.appendChild(el('span', 'tile__note', 'Foto en otro color'));
+    tile.appendChild(productLink(p, 'tile__link', img, title));
+    if (variant && SIZE_IMAGES[p.id] && !size && !urlsOf((p.photos || {})[color]).length) {
+      tile.appendChild(el('span', 'tile__note', 'Foto referencial'));
+    } else if (hasColorPhotos(p) && !ownPhotos.length) {
+      tile.appendChild(el('span', 'tile__note', 'Foto en otro color'));
+    }
 
     var favButton = button('tile__fav', undefined, function () {
       var favs = Object.assign({}, state.favs);
@@ -213,52 +222,61 @@
       setState({ favs: favs });
     });
     favButton.setAttribute('aria-pressed', String(fav));
-    favButton.setAttribute('aria-label', (fav ? 'Quitar de favoritos: ' : 'Agregar a favoritos: ') + p.name);
+    favButton.setAttribute('aria-label', (fav ? 'Quitar de favoritos: ' : 'Agregar a favoritos: ') + title);
     favButton.appendChild(heartIcon(fav));
     tile.appendChild(favButton);
 
     if (!p.inStock) tile.appendChild(el('span', 'tile__badge tile__badge--out', 'Agotado'));
-    else if (p.low) tile.appendChild(el('span', 'tile__badge tile__badge--low', 'Últimas unidades'));
-    else if (p.top) tile.appendChild(el('span', 'tile__badge tile__badge--top', 'Más vendido'));
+    else if (variant ? variant.low : p.low) tile.appendChild(el('span', 'tile__badge tile__badge--low', 'Últimas unidades'));
+    else if (p.top && !variant) tile.appendChild(el('span', 'tile__badge tile__badge--top', 'Más vendido'));
     return tile;
   }
 
-  function productCard(p) {
-    var color = pickedColor(p);
+  function productCard(entry) {
+    var p = entry.product;
+    var variant = entry.variant;
+    var title = variant ? p.name + ' ' + variant.label : p.name;
+    var color = pickedColor(p, variant);
     var card = el('article', 'card');
     card.dataset.product = p.id;
-    card.appendChild(productTile(p));
-    var title = el('h3', 'card__name');
-    var titleLink = el('a', '', p.name);
+    if (variant) card.dataset.variant = variant.id;
+    card.dataset.color = color;
+    card.appendChild(productTile(p, variant, title));
+    var heading = el('h3', 'card__name');
+    var titleLink = el('a', '', title);
     titleLink.href = '/producto/' + p.id;
     titleLink.dataset.product = p.id;
-    title.appendChild(titleLink);
-    card.appendChild(title);
+    heading.appendChild(titleLink);
+    card.appendChild(heading);
     card.appendChild(el('div', 'card__meta', p.cat + ' · ' + COLORS[color][0]));
-    card.appendChild(fillPrice(el('div', 'card__price'), p));
+    card.appendChild(fillPrice(el('div', 'card__price'), variant || p));
 
     var swatches = el('div', 'swatches');
     p.colors.forEach(function (key) {
       var swatch = button('swatch', undefined, function () {
-        var picked = Object.assign({}, state.picked);
-        picked[p.id] = key;
-        setState({ picked: picked });
+        if (variant) {
+          var colors = Object.assign({}, state.cardColors);
+          colors[cardKey(p, variant)] = key;
+          setState({ cardColors: colors });
+        } else {
+          var picked = Object.assign({}, state.picked);
+          picked[p.id] = key;
+          setState({ picked: picked });
+        }
       });
       swatch.style.backgroundColor = COLORS[key][1];
       swatch.title = COLORS[key][0];
-      swatch.setAttribute('aria-label', 'Color ' + COLORS[key][0] + ' para ' + p.name);
+      swatch.setAttribute('aria-label', 'Color ' + COLORS[key][0] + ' para ' + title);
       swatch.setAttribute('aria-pressed', String(key === color));
       swatches.appendChild(swatch);
     });
     card.appendChild(swatches);
 
-    var hasOptions = (p.variants || []).length > 0;
-    var add = button('button button--outline', hasOptions ? 'Ver opciones' : p.inStock ? 'Agregar' : 'Agotado', function () {
-      if (hasOptions) location.hash = '#producto/' + p.id;
-      else addToCart(p);
+    var add = button('button button--outline', p.inStock ? 'Agregar' : 'Agotado', function () {
+      addToCart(p, variant, color);
     });
     add.disabled = !p.inStock;
-    add.setAttribute('aria-label', (hasOptions ? 'Ver opciones de ' : p.inStock ? 'Agregar al carrito: ' : 'Agotado: ') + p.name);
+    add.setAttribute('aria-label', (p.inStock ? 'Agregar al carrito: ' : 'Agotado: ') + title);
     card.appendChild(add);
     return card;
   }
@@ -373,16 +391,30 @@
     return Object.keys(state.prices).filter(function (k) { return state.prices[k]; });
   }
 
+  // One catalog entry per option, or one for a product without options.
+  function catalogEntries() {
+    var entries = [];
+    products.forEach(function (p) {
+      var variants = p.variants || [];
+      if (!variants.length) entries.push({ product: p, variant: null, price: p.price, text: p.name + ' ' + p.cat });
+      variants.forEach(function (variant) {
+        entries.push({ product: p, variant: variant, price: variant.price, text: p.name + ' ' + variant.label + ' ' + p.cat });
+      });
+    });
+    return entries;
+  }
+
   function visibleProducts() {
     var query = normalize(state.query.trim());
     var ranges = activePriceRanges();
-    var list = products.filter(function (p) {
+    var list = catalogEntries().filter(function (entry) {
+      var p = entry.product;
       if (state.cat !== 'Todo' && p.cat !== state.cat) return false;
       if (state.color && p.colors.indexOf(state.color) < 0) return false;
       if (state.onlyFavs && !state.favs[p.id]) return false;
-      if (query && normalize(p.name + ' ' + p.cat).indexOf(query) < 0) return false;
+      if (query && normalize(entry.text).indexOf(query) < 0) return false;
       return !ranges.length || ranges.some(function (k) {
-        return p.price >= PRICE_RANGES[k][0] && p.price < PRICE_RANGES[k][1];
+        return entry.price >= PRICE_RANGES[k][0] && entry.price < PRICE_RANGES[k][1];
       });
     });
     if (state.sort === 'asc') list = list.slice().sort(function (a, b) { return a.price - b.price; });
@@ -643,6 +675,13 @@
       var card = event.target.closest('.card');
       if (!card) return;
       event.preventDefault();
+      // Open the product on the option and color shown in this card.
+      var pickedVariants = Object.assign({}, state.pickedVariants);
+      if (card.dataset.variant) pickedVariants[card.dataset.product] = Number(card.dataset.variant);
+      var picked = Object.assign({}, state.picked);
+      picked[card.dataset.product] = card.dataset.color;
+      state.pickedVariants = pickedVariants;
+      state.picked = picked;
       location.hash = '#producto/' + card.dataset.product;
     });
     byId('product-close').addEventListener('click', closeDetail);
