@@ -20,7 +20,7 @@
   var state = {
     cat: 'Todo', color: null, sort: 'rel', query: '', prices: {}, onlyFavs: false,
     favs: load(FAVS_KEY, {}), cart: load(CART_KEY, []), picked: {}, loadError: false,
-    detailId: null, detailPhoto: null, loaded: false, pickedVariants: {}
+    detailId: null, detailPhoto: null, loaded: false, pickedVariants: {}, cartStep: 'items'
   };
 
   function load(key, fallback) {
@@ -95,6 +95,7 @@
     var variant = pickedVariant(p);
     var cart = state.cart.slice();
     byId('cart-done').hidden = true;
+    state.cartStep = 'items';
     var line = cart.find(function (l) {
       return l.id === p.id && l.color === color && (l.variant || null) === (variant ? variant.id : null);
     });
@@ -477,10 +478,17 @@
 
     fill(byId('cart-lines'), lines.map(cartLine));
 
+    // Step 1 shows the products; only step 2 asks for the customer's details.
     var hasLines = lines.length > 0;
+    var askingDetails = hasLines && state.cartStep === 'details';
     byId('cart-empty').hidden = hasLines || !byId('cart-done').hidden;
-    byId('checkout').hidden = !hasLines;
+    byId('cart-lines').hidden = askingDetails;
+    byId('cart-summary').hidden = !hasLines || askingDetails;
+    byId('checkout').hidden = !askingDetails;
+    var showingPayment = !hasLines && !byId('cart-done').hidden;
+    byId('cart-title').textContent = askingDetails ? 'Tus datos' : showingPayment ? 'Tu pedido' : 'Tu carrito';
     byId('cart-total').textContent = money(total);
+    byId('checkout-total').textContent = money(total);
   }
 
   function render() {
@@ -529,6 +537,7 @@
         'Hola, pagué con Yape mi pedido #' + body.order + ' por ' + money(body.total) + '. Adjunto mi constancia.'
       );
       byId('cart-done').hidden = false;
+      state.cartStep = 'items';
       setCart([]);
       loadProducts();
     }).catch(function (error) {
@@ -590,6 +599,16 @@
       if (pack && pack.inStock) addToCart(pack);
     });
     byId('checkout').addEventListener('submit', submitOrder);
+    byId('cart-continue').addEventListener('click', function () {
+      setState({ cartStep: 'details' });
+      byId('cart').scrollTop = 0;
+      byId('checkout').elements.name.focus();
+    });
+    byId('checkout-back').addEventListener('click', function () {
+      setState({ cartStep: 'items' });
+      byId('cart').scrollTop = 0;
+    });
+    byId('cart-keep-shopping').addEventListener('click', function () { byId('cart').close(); });
     window.addEventListener('hashchange', syncDetailWithHash);
     // Links are real pages for search engines; here they open the product in place.
     byId('grid').addEventListener('click', function (event) {

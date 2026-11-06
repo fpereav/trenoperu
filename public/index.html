@@ -194,8 +194,16 @@
     </div>
     <p id="cart-empty" class="cart__empty">Tu carrito está vacío.</p>
     <ul id="cart-lines" class="cart__lines"></ul>
-    <form id="checkout" class="checkout" hidden>
+    <div id="cart-summary" class="cart-summary" hidden>
       <div class="checkout__total"><span>Total</span><span id="cart-total"></span></div>
+      <p class="checkout__note">El costo de delivery se coordina aparte.</p>
+      <button id="cart-continue" class="button" type="button">Continuar</button>
+      <button id="cart-keep-shopping" class="link-button" type="button">Seguir comprando</button>
+    </div>
+    <form id="checkout" class="checkout" hidden>
+      <button id="checkout-back" class="link-button checkout__back" type="button">← Volver al carrito</button>
+      <h3 class="checkout__title">Tus datos de entrega</h3>
+      <div class="checkout__total"><span>Total</span><span id="checkout-total"></span></div>
       <p class="checkout__note">Completa tus datos y confirma. Luego verás el QR de Yape para pagar. El costo de delivery se coordina aparte.</p>
       <label class="field">Nombre completo<input name="name" required maxlength="120" autocomplete="name"></label>
       <label class="field">Teléfono<input name="phone" type="tel" required maxlength="20" autocomplete="tel"></label>
