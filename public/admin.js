@@ -44,6 +44,7 @@
     else loadOrders();
   }
 
+  var COLOR_LIST = window.TRENO_COLORS;
   var MAX_PHOTO_SIDE = 1000;
   var MAX_SOURCE_BYTES = 25 * 1024 * 1024;
 
@@ -77,65 +78,155 @@
     });
   }
 
-  function currentPhoto(product, slot) {
-    if (product.photos[slot]) return product.photos[slot];
-    if (slot === 'principal') return 'assets/img/' + product.img;
-    var builtIn = (window.TRENO_COLOR_IMAGES || {})[product.id] || {};
-    return builtIn[slot] ? 'assets/img/' + builtIn[slot] : null;
+  function builtInPhotos(product, slot) {
+    var extras = (window.TRENO_EXTRA_IMAGES || {})[product.id] || [];
+    var color = slot === 'principal' ? undefined : slot;
+    var main = color ? ((window.TRENO_COLOR_IMAGES || {})[product.id] || {})[color] : undefined;
+    return (main ? [main] : []).concat(extras.filter(function (extra) { return extra.color === color; }).map(function (extra) {
+      return extra.file;
+    }));
   }
 
-  function photoSlot(product, slot, editor, status) {
-    var wrap = makeEl('div', 'slot');
-    wrap.appendChild(makeEl('span', 'slot__name', slot));
-    var src = currentPhoto(product, slot);
-    var showEmpty = function () { return makeEl('div', 'slot__empty', 'Sin foto'); };
-    if (src) {
-      var thumb = makeEl('img', 'slot__thumb');
-      thumb.src = src;
-      thumb.alt = 'Foto ' + slot + ' de ' + product.name;
-      thumb.addEventListener('error', function () { thumb.replaceWith(showEmpty()); });
-      wrap.appendChild(thumb);
-    } else {
-      wrap.appendChild(showEmpty());
-    }
+  function photoThumb(src, alt) {
+    var thumb = makeEl('img', 'slot__thumb');
+    thumb.src = src;
+    thumb.alt = alt;
+    thumb.loading = 'lazy';
+    thumb.addEventListener('error', function () { thumb.replaceWith(makeEl('div', 'slot__empty', 'Sin foto')); });
+    return thumb;
+  }
 
-    var upload = makeEl('label', 'slot__button', product.photos[slot] ? 'Cambiar' : 'Subir');
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/jpeg,image/png,image/webp';
-    input.setAttribute('aria-label', 'Subir foto ' + slot + ' de ' + product.name);
-    input.addEventListener('change', function () {
-      var file = input.files[0];
-      if (!file) return;
-      setStatus(status, 'Subiendo foto…');
-      toJpeg(file).then(function (blob) {
+  function uploadFiles(product, slot, files, editor, status) {
+    var list = Array.prototype.slice.call(files);
+    var chain = Promise.resolve();
+    list.forEach(function (file, index) {
+      chain = chain.then(function () {
+        setStatus(status, 'Subiendo foto ' + (index + 1) + ' de ' + list.length + '…');
+        return toJpeg(file);
+      }).then(function (blob) {
         return api('/api/admin/products/' + product.id + '/photos/' + slot, {
-          method: 'PUT',
+          method: 'POST',
           headers: { 'Content-Type': 'image/jpeg' },
           body: blob
         });
       }).then(function (body) {
         product.photos = body.photos;
-        replaceEditor(product, editor, 'Foto guardada.');
-      }).catch(function (error) { handleEditorError(error, status); });
+      });
     });
-    upload.appendChild(input);
-    wrap.appendChild(upload);
+    chain.then(function () {
+      replaceEditor(product, editor, list.length === 1 ? 'Foto guardada.' : 'Fotos guardadas.');
+    }).catch(function (error) {
+      if (error.status === 401) return showLogin('Tu sesión expiró.');
+      // Photos uploaded before the failure are saved; show them with the error.
+      var fresh = replaceEditor(product, editor);
+      handleEditorError(error, fresh.querySelector('.editor__status'));
+    });
+  }
 
-    if (product.photos[slot]) {
+  function saveColors(product, colors, editor, status, message) {
+    api('/api/admin/products/' + product.id + '/colors', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ colors: colors })
+    }).then(function (body) {
+      product.colors = body.colors;
+      product.photos = body.photos;
+      replaceEditor(product, editor, message);
+    }).catch(function (error) { handleEditorError(error, status); });
+  }
+
+  function photoGroup(product, slot, editor, status) {
+    var isColor = slot !== 'principal';
+    var group = makeEl('section', 'photo-group');
+    var head = makeEl('div', 'photo-group__head');
+    if (isColor) {
+      var dot = makeEl('span', 'photo-group__dot');
+      dot.style.backgroundColor = COLOR_LIST[slot][1];
+      head.appendChild(dot);
+    }
+    head.appendChild(makeEl('h3', 'photo-group__title', isColor ? COLOR_LIST[slot][0] : 'Fotos generales'));
+    if (isColor) {
+      var removeColor = makeEl('button', 'slot__remove photo-group__delete', 'Eliminar color');
+      removeColor.type = 'button';
+      removeColor.setAttribute('aria-label', 'Eliminar color ' + COLOR_LIST[slot][0] + ' de ' + product.name);
+      removeColor.addEventListener('click', function () {
+        if (product.colors.length === 1) {
+          setStatus(status, 'El producto debe tener al menos un color.', true);
+          return;
+        }
+        if (!window.confirm('¿Eliminar el color ' + COLOR_LIST[slot][0] + ' de ' + product.name + '? También se borrarán las fotos que subiste para este color.')) return;
+        saveColors(product, product.colors.filter(function (color) { return color !== slot; }), editor, status, 'Color eliminado.');
+      });
+      head.appendChild(removeColor);
+    }
+    group.appendChild(head);
+
+    var grid = makeEl('div', 'slots');
+    var uploaded = product.photos[slot] || [];
+    uploaded.forEach(function (photo, index) {
+      var item = makeEl('div', 'slot');
+      item.appendChild(photoThumb(photo.url, 'Foto ' + (index + 1) + ' de ' + product.name));
       var remove = makeEl('button', 'slot__remove', 'Quitar');
       remove.type = 'button';
-      remove.setAttribute('aria-label', 'Quitar foto ' + slot + ' de ' + product.name);
+      remove.setAttribute('aria-label', 'Quitar foto ' + (index + 1) + ' del grupo ' + slot + ' de ' + product.name);
       remove.addEventListener('click', function () {
         if (!window.confirm('¿Quitar esta foto de ' + product.name + '?')) return;
-        api('/api/admin/products/' + product.id + '/photos/' + slot, { method: 'DELETE' }).then(function (body) {
+        api('/api/admin/products/' + product.id + '/images/' + photo.id, { method: 'DELETE' }).then(function (body) {
           product.photos = body.photos;
           replaceEditor(product, editor, 'Foto quitada.');
         }).catch(function (error) { handleEditorError(error, status); });
       });
-      wrap.appendChild(remove);
+      item.appendChild(remove);
+      grid.appendChild(item);
+    });
+    if (!uploaded.length) {
+      builtInPhotos(product, slot).forEach(function (file) {
+        var item = makeEl('div', 'slot');
+        item.appendChild(photoThumb('assets/img/' + file, 'Foto actual de ' + product.name));
+        item.appendChild(makeEl('span', 'slot__caption', 'Foto actual'));
+        grid.appendChild(item);
+      });
     }
-    return wrap;
+
+    var upload = makeEl('label', 'slot__button slot__add', 'Agregar fotos');
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = 'image/jpeg,image/png,image/webp';
+    input.setAttribute('aria-label', 'Agregar fotos al grupo ' + slot + ' de ' + product.name);
+    input.addEventListener('change', function () {
+      if (input.files.length) uploadFiles(product, slot, input.files, editor, status);
+    });
+    upload.appendChild(input);
+    grid.appendChild(upload);
+    group.appendChild(grid);
+    return group;
+  }
+
+  function colorAdder(product, editor, status) {
+    var row = makeEl('div', 'editor__row color-adder');
+    var label = makeEl('label', '', 'Agregar color');
+    var select = document.createElement('select');
+    select.className = 'color-select';
+    select.setAttribute('aria-label', 'Agregar color a ' + product.name);
+    var available = Object.keys(COLOR_LIST).filter(function (color) { return product.colors.indexOf(color) < 0; });
+    available.forEach(function (color) {
+      var option = document.createElement('option');
+      option.value = color;
+      option.textContent = COLOR_LIST[color][0];
+      select.appendChild(option);
+    });
+    label.appendChild(select);
+    row.appendChild(label);
+    var add = makeEl('button', 'stock-save', 'Agregar');
+    add.type = 'button';
+    add.disabled = !available.length;
+    add.setAttribute('aria-label', 'Agregar el color elegido a ' + product.name);
+    add.addEventListener('click', function () {
+      saveColors(product, product.colors.concat(select.value), editor, status, 'Color agregado.');
+    });
+    row.appendChild(add);
+    return row;
   }
 
   function setStatus(status, message, isError) {
@@ -152,6 +243,7 @@
     var fresh = productEditor(product);
     editor.replaceWith(fresh);
     if (message) setStatus(fresh.querySelector('.editor__status'), message);
+    return fresh;
   }
 
   function productEditor(product) {
@@ -249,10 +341,11 @@
       });
     });
 
-    var slots = makeEl('div', 'slots');
-    ['principal'].concat(product.colors).forEach(function (slot) {
-      slots.appendChild(photoSlot(product, slot, editor, status));
+    var slots = makeEl('div', 'photo-groups');
+    product.colors.concat('principal').forEach(function (slot) {
+      slots.appendChild(photoGroup(product, slot, editor, status));
     });
+    slots.appendChild(colorAdder(product, editor, status));
     editor.appendChild(slots);
     return editor;
   }

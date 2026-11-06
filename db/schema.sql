@@ -21,6 +21,12 @@ CREATE TABLE IF NOT EXISTS product_images (
   PRIMARY KEY (product_id, slot)
 );
 
+-- Each slot (a color or 'principal') can hold several photos.
+ALTER TABLE product_images ADD COLUMN IF NOT EXISTS id bigserial;
+ALTER TABLE product_images DROP CONSTRAINT IF EXISTS product_images_pkey;
+ALTER TABLE product_images ADD PRIMARY KEY (id);
+CREATE INDEX IF NOT EXISTS product_images_slot_idx ON product_images (product_id, slot, id);
+
 CREATE TABLE IF NOT EXISTS orders (
   id            bigserial PRIMARY KEY,
   created_at    timestamptz NOT NULL DEFAULT now(),

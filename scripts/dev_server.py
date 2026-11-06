@@ -15,7 +15,7 @@ from index import handler  # noqa: E402
 class DevHandler(handler, SimpleHTTPRequestHandler):
     def do_GET(self):
         path = urlsplit(self.path).path
-        if path.startswith("/api/"):
+        if path.startswith(("/api/", "/producto/")) or path == "/sitemap.xml":
             return handler.do_GET(self)
         if path == "/admin":
             self.path = "/admin.html"

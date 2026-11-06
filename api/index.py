@@ -1,6 +1,7 @@
 """TRENO API: catalog, order creation and the admin panel endpoints."""
 import hashlib
 import hmac
+import html
 import json
 import os
 import re
@@ -19,6 +20,13 @@ MAX_QTY = 20
 MAX_STOCK = 100_000
 MAX_IMAGE_BYTES = 2_000_000
 MAIN_SLOT = "principal"
+MAX_PHOTOS_PER_SLOT = 10
+SITE_URL = os.environ.get("SITE_URL", "https://trenoperu.vercel.app").rstrip("/")
+IMAGES_WITHOUT_FILE = {"roller-pvc.jpg"}
+COLOR_KEYS = (
+    "rosado", "negro", "rojo", "morado", "plomo", "verde",
+    "fucsia", "marino", "azul", "celeste", "naranja", "amarillo",
+)
 ORDERS_PER_IP_PER_HOUR = 5
 SESSION_SECONDS = 12 * 60 * 60
 COOKIE = "treno_admin"
@@ -58,13 +66,9 @@ def rows(conn, sql, **params):
 
 def uploaded_photos(conn):
     photos = {}
-    for row in rows(
-        conn,
-        "SELECT product_id, slot, extract(epoch FROM updated_at)::bigint AS version "
-        "FROM product_images",
-    ):
-        url = f"/api/images/{row['product_id']}/{row['slot']}?v={row['version']}"
-        photos.setdefault(row["product_id"], {})[row["slot"]] = url
+    for row in rows(conn, "SELECT id, product_id, slot FROM product_images ORDER BY id"):
+        slots = photos.setdefault(row["product_id"], {})
+        slots.setdefault(row["slot"], []).append({"id": row["id"], "url": f"/api/images/{row['id']}"})
     return photos
 
 
@@ -74,7 +78,7 @@ def list_products():
         products = rows(
             conn,
             "SELECT id, name, description, category, price_cents, image, colors, stock, top "
-            "FROM products ORDER BY sort_order",
+            "FROM products WHERE stock > 0 ORDER BY sort_order",
         )
         photos = uploaded_photos(conn)
     finally:
@@ -319,27 +323,68 @@ def set_product_details(product_id, payload):
     return {"id": product_id, "name": name, "description": description}
 
 
-def check_photo_slot(conn, product_id, slot):
+def product_colors(conn, product_id):
     found = conn.run("SELECT colors FROM products WHERE id = :id", id=product_id)
     if not found:
         raise ApiError(404, "Producto no encontrado.")
-    if slot != MAIN_SLOT and slot not in found[0][0]:
-        raise ApiError(400, "Ese color no pertenece al producto.")
+    return found[0][0]
 
 
 def photos_of(conn, product_id):
     return uploaded_photos(conn).get(product_id, {})
 
 
-def save_product_photo(product_id, slot, data):
+def set_product_colors(product_id, payload):
+    colors = payload.get("colors")
+    if not isinstance(colors, list) or not all(isinstance(c, str) for c in colors):
+        raise ApiError(400, "Revisa los colores.")
+    if not colors:
+        raise ApiError(400, "El producto debe tener al menos un color.")
+    if len(set(colors)) != len(colors) or any(c not in COLOR_KEYS for c in colors):
+        raise ApiError(400, "Revisa los colores.")
+    conn = connect()
+    try:
+        conn.run("START TRANSACTION")
+        product_colors(conn, product_id)
+        conn.run(
+            "UPDATE products SET colors = CAST(:colors AS jsonb) WHERE id = :id",
+            colors=json.dumps(colors),
+            id=product_id,
+        )
+        # Photos of a removed color can no longer be shown, so they go with it.
+        for row in rows(conn, "SELECT DISTINCT slot FROM product_images WHERE product_id = :id", id=product_id):
+            if row["slot"] != MAIN_SLOT and row["slot"] not in colors:
+                conn.run(
+                    "DELETE FROM product_images WHERE product_id = :id AND slot = :slot",
+                    id=product_id,
+                    slot=row["slot"],
+                )
+        conn.run("COMMIT")
+        return {"id": product_id, "colors": colors, "photos": photos_of(conn, product_id)}
+    except Exception:
+        conn.run("ROLLBACK")
+        raise
+    finally:
+        conn.close()
+
+
+def add_product_photo(product_id, slot, data):
     if not data.startswith(b"\xff\xd8\xff"):
         raise ApiError(415, "La foto debe enviarse como JPG.")
     conn = connect()
     try:
-        check_photo_slot(conn, product_id, slot)
+        colors = product_colors(conn, product_id)
+        if slot != MAIN_SLOT and slot not in colors:
+            raise ApiError(400, "Ese color no pertenece al producto.")
+        count = conn.run(
+            "SELECT count(*) FROM product_images WHERE product_id = :id AND slot = :slot",
+            id=product_id,
+            slot=slot,
+        )[0][0]
+        if count >= MAX_PHOTOS_PER_SLOT:
+            raise ApiError(409, f"Cada grupo admite hasta {MAX_PHOTOS_PER_SLOT} fotos.")
         conn.run(
-            "INSERT INTO product_images (product_id, slot, data) VALUES (:id, :slot, :data) "
-            "ON CONFLICT (product_id, slot) DO UPDATE SET data = EXCLUDED.data, updated_at = now()",
+            "INSERT INTO product_images (product_id, slot, data) VALUES (:id, :slot, :data)",
             id=product_id,
             slot=slot,
             data=data,
@@ -349,24 +394,26 @@ def save_product_photo(product_id, slot, data):
         conn.close()
 
 
-def delete_product_photo(product_id, slot):
+def delete_product_photo(product_id, image_id):
     conn = connect()
     try:
-        check_photo_slot(conn, product_id, slot)
-        conn.run("DELETE FROM product_images WHERE product_id = :id AND slot = :slot", id=product_id, slot=slot)
+        product_colors(conn, product_id)
+        deleted = conn.run(
+            "DELETE FROM product_images WHERE id = :image AND product_id = :id RETURNING id",
+            image=image_id,
+            id=product_id,
+        )
+        if not deleted:
+            raise ApiError(404, "Foto no encontrada.")
         return {"id": product_id, "photos": photos_of(conn, product_id)}
     finally:
         conn.close()
 
 
-def read_product_photo(product_id, slot):
+def read_product_photo(image_id):
     conn = connect()
     try:
-        found = conn.run(
-            "SELECT data FROM product_images WHERE product_id = :id AND slot = :slot",
-            id=product_id,
-            slot=slot,
-        )
+        found = conn.run("SELECT data FROM product_images WHERE id = :image", image=image_id)
     finally:
         conn.close()
     if not found:
@@ -396,6 +443,116 @@ def set_product_stock(product_id, payload):
     if not found:
         raise ApiError(404, "Producto no encontrado.")
     raise ApiError(409, "El stock cambió mientras editabas. Revisa la cantidad actual: " + str(found[0][0]) + ".")
+
+
+def product_for_page(product_id):
+    conn = connect()
+    try:
+        found = rows(
+            conn,
+            "SELECT id, name, description, category, price_cents, image, colors FROM products "
+            "WHERE id = :id AND stock > 0",
+            id=product_id,
+        )
+        photos = photos_of(conn, product_id) if found else {}
+    finally:
+        conn.close()
+    if not found:
+        return None, None
+    product = found[0]
+    for slot in [MAIN_SLOT] + list(product["colors"]):
+        if photos.get(slot):
+            return product, SITE_URL + photos[slot][0]["url"]
+    if product["image"] in IMAGES_WITHOUT_FILE:
+        return product, None
+    return product, f"{SITE_URL}/assets/img/{product['image']}"
+
+
+def product_page(product_id):
+    product, image = product_for_page(product_id)
+    if not product:
+        return None
+    url = f"{SITE_URL}/producto/{product['id']}"
+    name = product["name"]
+    price = f"{product['price_cents'] / 100:.2f}"
+    summary = product["description"] or f"{name} en TRENO Perú. Delivery a todo el Perú."
+    data = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": name,
+        "description": summary,
+        "category": product["category"],
+        "sku": product["id"],
+        "url": url,
+        "offers": {
+            "@type": "Offer",
+            "url": url,
+            "price": price,
+            "priceCurrency": "PEN",
+            "availability": "https://schema.org/InStock",
+            "seller": {"@type": "Organization", "name": "TRENO Perú"},
+        },
+    }
+    if image:
+        data["image"] = image
+    # Keep the JSON from closing its script tag when text contains "<".
+    structured = json.dumps(data, ensure_ascii=False).replace("<", "\\u003c")
+    esc = lambda text: html.escape(text, quote=True)
+    image_meta = f'<meta property="og:image" content="{esc(image)}">' if image else ""
+    image_tag = f'<img src="{esc(image)}" alt="{esc(name)}" width="800" height="800">' if image else ""
+    description_tag = f'<p class="product__description">{esc(product["description"])}</p>' if product["description"] else ""
+    return f"""<!doctype html>
+<html lang="es-PE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{esc(name)} | TRENO Perú</title>
+<meta name="description" content="{esc(summary[:155])}">
+<link rel="canonical" href="{esc(url)}">
+<meta property="og:type" content="product">
+<meta property="og:site_name" content="TRENO Perú">
+<meta property="og:title" content="{esc(name)} | TRENO Perú">
+<meta property="og:description" content="{esc(summary[:155])}">
+<meta property="og:url" content="{esc(url)}">
+{image_meta}
+<link rel="icon" type="image/png" href="/assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">{structured}</script>
+</head>
+<body>
+<div class="promo-bar">Delivery a todo el Perú · Pedidos al 957 503 022</div>
+<header class="site-header"><div class="wrap site-header__row"><a class="logo" href="/"><img src="/assets/img/logo-treno.png" alt="TRENO" width="404" height="144"></a></div></header>
+<main class="wrap"><article class="product__layout product__layout--page">
+<div class="product__main">{image_tag}</div>
+<div class="product__info">
+<h1 class="display">{esc(name)}</h1>
+<div class="card__meta">{esc(product["category"])}</div>
+<div class="product__price">S/ {price}</div>
+{description_tag}
+<a class="button" href="/#producto/{esc(product["id"])}">Comprar</a>
+<a href="/">Ver todo el catálogo</a>
+</div>
+</article></main>
+<footer class="site-footer"><div class="wrap site-footer__row"><a class="logo" href="/"><img src="/assets/img/logo-treno-blanco.png" alt="TRENO" width="404" height="144"></a><div class="site-footer__links"><a href="tel:+51957503022">Pedidos: 957 503 022</a><a href="https://www.instagram.com/treno_peru">Instagram: @treno_peru</a></div></div></footer>
+</body>
+</html>
+"""
+
+
+def sitemap():
+    conn = connect()
+    try:
+        ids = [row[0] for row in conn.run("SELECT id FROM products WHERE stock > 0 ORDER BY sort_order")]
+    finally:
+        conn.close()
+    urls = [SITE_URL + "/"] + [f"{SITE_URL}/producto/{product_id}" for product_id in ids]
+    entries = "".join(f"<url><loc>{html.escape(url)}</loc></url>" for url in urls)
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{entries}</urlset>'
+    )
 
 
 def session_secret():
@@ -433,11 +590,20 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def send_text(self, status, content_type, text):
+        data = text.encode()
+        self.send_response(status)
+        self.send_header("Content-Type", content_type + "; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "public, max-age=0, s-maxage=300")
+        self.end_headers()
+        self.wfile.write(data)
+
     def send_image(self, data):
         self.send_response(200)
         self.send_header("Content-Type", "image/jpeg")
         self.send_header("Content-Length", str(len(data)))
-        # URLs carry a version, so a changed photo always gets a new address.
+        # Each upload gets a new id, so a stored photo at a given address never changes.
         self.send_header("Cache-Control", "public, max-age=31536000, s-maxage=31536000, immutable")
         self.end_headers()
         self.wfile.write(data)
@@ -492,9 +658,17 @@ class handler(BaseHTTPRequestHandler):
 
         if method == "GET" and path == "/api/products":
             return self.send_json(200, list_products())
-        image = re.fullmatch(r"/api/images/([A-Z0-9]{1,20})/([a-z]{1,20})", path)
+        if method == "GET" and path == "/sitemap.xml":
+            return self.send_text(200, "application/xml", sitemap())
+        page = re.fullmatch(r"/producto/([A-Z0-9]{1,20})", path)
+        if method == "GET" and page:
+            content = product_page(page.group(1))
+            if content is None:
+                raise ApiError(404, "Producto no disponible.")
+            return self.send_text(200, "text/html", content)
+        image = re.fullmatch(r"/api/images/(\d{1,18})", path)
         if method == "GET" and image:
-            return self.send_image(read_product_photo(image.group(1), image.group(2)))
+            return self.send_image(read_product_photo(int(image.group(1))))
         if method == "POST" and path == "/api/orders":
             return self.send_json(201, create_order(self.read_json(), self.client_ip()))
         if method == "POST" and path == "/api/admin/login":
@@ -528,13 +702,18 @@ class handler(BaseHTTPRequestHandler):
         if method == "PATCH" and details:
             self.require_admin()
             return self.send_json(200, set_product_details(details.group(1), self.read_json()))
+        colors = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/colors", path)
+        if method == "PATCH" and colors:
+            self.require_admin()
+            return self.send_json(200, set_product_colors(colors.group(1), self.read_json()))
         photo = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/photos/([a-z]{1,20})", path)
-        if method == "PUT" and photo:
+        if method == "POST" and photo:
             self.require_admin()
-            return self.send_json(200, save_product_photo(photo.group(1), photo.group(2), self.read_image()))
-        if method == "DELETE" and photo:
+            return self.send_json(200, add_product_photo(photo.group(1), photo.group(2), self.read_image()))
+        stored = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})/images/(\d{1,18})", path)
+        if method == "DELETE" and stored:
             self.require_admin()
-            return self.send_json(200, delete_product_photo(photo.group(1), photo.group(2)))
+            return self.send_json(200, delete_product_photo(stored.group(1), int(stored.group(2))))
         match = re.fullmatch(r"/api/admin/orders/(\d{1,12})", path)
         if method == "PATCH" and match:
             self.require_admin()
@@ -558,9 +737,6 @@ class handler(BaseHTTPRequestHandler):
         self.serve_api()
 
     def do_PATCH(self):
-        self.serve_api()
-
-    def do_PUT(self):
         self.serve_api()
 
     def do_DELETE(self):

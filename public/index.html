@@ -1,10 +1,19 @@
 <!doctype html>
-<html lang="es">
+<html lang="es-PE">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TRENO — Equipamiento para entrenar</title>
-<meta name="description" content="Pesas, mats, bandas y accesorios para entrenar en casa, en el parque o donde quieras. Delivery a todo el Perú.">
+<title>TRENO Perú | Pesas, mats y equipamiento para entrenar en casa</title>
+<meta name="description" content="Compra pesas rusas, mancuernas, mats, bandas y accesorios para entrenar en casa o donde quieras. Delivery a todo el Perú.">
+<link rel="canonical" href="https://trenoperu.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TRENO Perú">
+<meta property="og:locale" content="es_PE">
+<meta property="og:title" content="TRENO Perú | Pesas, mats y equipamiento para entrenar en casa">
+<meta property="og:description" content="Pesas rusas, mancuernas, mats, bandas y accesorios. Delivery a todo el Perú.">
+<meta property="og:url" content="https://trenoperu.vercel.app/">
+<meta property="og:image" content="https://trenoperu.vercel.app/assets/img/promo-pack-chaleco.jpg">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Store","name":"TRENO Perú","url":"https://trenoperu.vercel.app/","logo":"https://trenoperu.vercel.app/assets/img/logo-treno.png","image":"https://trenoperu.vercel.app/assets/img/promo-pack-chaleco.jpg","telephone":"+51957503022","priceRange":"S/","areaServed":"PE","sameAs":["https://www.instagram.com/treno_peru"]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="assets/img/favicon.png">
@@ -89,10 +98,6 @@
               <label class="check"><input type="checkbox" data-price="mid">S/ 70 – S/ 150</label>
               <label class="check"><input type="checkbox" data-price="high">Más de S/ 150</label>
             </div>
-            <div class="filter-group">
-              <h3>Disponibilidad</h3>
-              <label class="check"><input id="in-stock" type="checkbox">Solo con stock</label>
-            </div>
           </div>
         </details>
         <span id="count" class="toolbar__count"></span>
@@ -147,6 +152,31 @@
       </div>
     </div>
   </footer>
+
+  <dialog id="product" class="product" aria-labelledby="product-name">
+    <button id="product-close" class="product__close" type="button" aria-label="Cerrar">×</button>
+    <div class="product__layout">
+      <div class="product__gallery">
+        <div class="product__main">
+          <img id="product-image" alt="">
+          <div id="product-image-empty" class="tile__empty" hidden>Foto próximamente</div>
+        </div>
+        <p id="product-color-note" class="product__note" hidden>Foto en otro color</p>
+        <div id="product-thumbs" class="product__thumbs"></div>
+      </div>
+      <div class="product__info">
+        <span id="product-badge" class="tile__badge tile__badge--low product__badge" hidden></span>
+        <h2 id="product-name" class="display"></h2>
+        <div id="product-meta" class="card__meta"></div>
+        <div id="product-price" class="product__price"></div>
+        <p id="product-description" class="product__description" hidden></p>
+        <div class="product__label">Color</div>
+        <div id="product-swatches" class="swatches product__swatches"></div>
+        <button id="product-add" class="button" type="button">Agregar al carrito</button>
+        <p class="checkout__note">Coordinamos el pago y el delivery contigo al confirmar tu pedido.</p>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="cart" class="cart" aria-labelledby="cart-title">
     <div class="cart__head">
