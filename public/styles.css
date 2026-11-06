@@ -99,22 +99,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .count-badge { position: absolute; top: 3px; right: 1px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--accent); font-size: 11px; font-weight: 700; }
 
 /* Hero */
-.hero { background: linear-gradient(100deg, #000000 0%, #17171A 55%, #3A0B1B 100%); color: #ffffff; }
-.hero__inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 48px; max-width: 1320px; margin-inline: auto; padding-inline: var(--page-pad); }
-.hero__poster { grid-column: 2; grid-row: 1; display: block; padding-block: 16px; line-height: 0; }
-.hero__poster img { display: block; width: auto; height: 440px; max-width: 100%; border-radius: 8px; }
-.hero__text { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding-block: 24px; }
-.hero__eyebrow { padding: 4px 12px; border-radius: 4px; background: var(--accent); color: var(--ink); font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
-.hero__text .display { font-size: clamp(40px, 5vw, 64px); }
-.hero__text p { margin: 0; font-size: 18px; font-weight: 500; }
-.hero__text .hero__price { color: var(--accent); font-size: clamp(52px, 6vw, 80px); }
-.hero__actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.hero__cta { border-color: var(--accent); background: var(--accent); color: var(--ink); }
-.hero__cta:hover { border-color: #ffffff; background: #ffffff; color: var(--ink); }
-.hero__whatsapp { border-color: #ffffff; background: transparent; color: #ffffff; text-align: center; }
-.hero__whatsapp:hover { border-color: #ffffff; background: #ffffff; color: var(--ink); }
-.hero__phone { font-size: 14px; }
-.hero__phone:hover { color: #ffffff; }
+.hero { background: #000000; }
+.hero__banner { position: relative; max-width: 2000px; margin-inline: auto; }
+.hero__banner img { display: block; width: 100%; height: auto; }
+/* The banner image draws these two buttons; these areas sit exactly over them. */
+.hero__action { position: absolute; display: block; padding: 0; border: 0; border-radius: 40px; background: transparent; color: transparent; font-size: 0; cursor: pointer; }
+.hero__action:hover { box-shadow: 0 0 0 2px #ffffff; }
+.hero__action:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+.hero__action--cart { left: 3.6%; top: 79.5%; width: 20.3%; height: 11%; }
+.hero__action--whatsapp { left: 24.8%; top: 79.8%; width: 24%; height: 10.4%; }
 
 /* Benefits */
 .benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 24px; margin-block: 0; padding-block: 20px; border-bottom: 1px solid var(--line); list-style: none; font-size: 14px; font-weight: 600; text-align: center; }
@@ -257,10 +250,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 @media (max-width: 900px) {
-  .hero__inner { grid-template-columns: minmax(0, 1fr); gap: 0; }
-  .hero__poster { grid-column: 1; padding-block: 16px 0; }
-  .hero__poster img { height: 340px; margin-inline: auto; }
-  .hero__text { grid-column: 1; grid-row: 2; padding-block: 16px 24px; }
+  /* Too small to tap on the image: show real buttons under the banner. */
+  .hero__actions { display: flex; flex-direction: column; gap: 8px; padding: 12px var(--page-pad) 16px; }
+  .hero__action { position: static; width: auto; height: auto; min-height: 44px; padding: 12px; border-radius: 4px; color: #111111; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; line-height: 1.2; text-align: center; text-decoration: none; text-transform: uppercase; }
+  .hero__action:hover { box-shadow: none; }
+  .hero__action--cart { background: var(--accent); }
+  .hero__action--cart:disabled { background: var(--line); color: var(--muted); }
+  .hero__action--whatsapp { border: 1px solid #ffffff; color: #ffffff; }
   .filters__panel { grid-template-columns: minmax(0, 1fr); }
   .product__layout { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
   .product { width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
