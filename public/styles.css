@@ -100,12 +100,18 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .count-badge { position: absolute; top: 3px; right: 1px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--accent); font-size: 11px; font-weight: 700; }
 
 /* Hero */
-.hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: 24px; background: var(--tile); }
-.hero__text { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 12px; padding: 48px; background: var(--accent); }
+.hero { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; margin-top: 24px; background: #0B0B0B; color: #ffffff; }
+.hero__poster { display: block; line-height: 0; }
+.hero__poster img { display: block; width: auto; height: min(720px, 85vh); max-width: 100%; }
+.hero__text { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 48px; }
+.hero__eyebrow { padding: 4px 12px; background: var(--accent); color: var(--ink); font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .hero__text .display { font-size: clamp(44px, 5.5vw, 72px); }
-.hero__text p { margin: 0 0 8px; font-size: 16px; font-weight: 500; }
-.hero__media { min-height: 340px; }
-.hero__media img { display: block; width: 100%; height: 100%; max-height: 400px; padding: 16px; object-fit: contain; mix-blend-mode: multiply; }
+.hero__text p { margin: 0; font-size: 18px; font-weight: 500; }
+.hero__text .hero__price { color: var(--accent); font-size: clamp(64px, 8vw, 104px); }
+.hero__cta { border-color: var(--accent); background: var(--accent); color: var(--ink); text-align: center; }
+.hero__cta:hover { border-color: #ffffff; background: #ffffff; color: var(--ink); }
+.hero__phone { font-size: 14px; }
+.hero__phone:hover { color: #ffffff; }
 
 /* Catalog */
 .catalog { padding-block: 48px 64px; scroll-margin-top: 16px; }
@@ -216,9 +222,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .toolbar { flex-wrap: wrap; }
   .chips { flex-basis: 100%; }
   .hero, .band { grid-template-columns: minmax(0, 1fr); }
-  .hero__text { padding: 32px var(--page-pad); order: 2; }
-  .hero__media { min-height: 0; }
-  .hero__media img { height: 280px; }
+  .hero__text { padding: 24px var(--page-pad) 32px; }
+  .hero__poster img { width: 100%; height: auto; }
   .social__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .social__grid img:nth-child(n + 4) { display: none; }
 }
