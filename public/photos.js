@@ -19,6 +19,12 @@ window.TRENO_COLOR_IMAGES = {
   GUAPLA: { rojo: 'guantes-box.jpg', negro: 'guantes-box-negro.jpg' }
 };
 
+// Built-in photos per weight, used when a presentation such as "10 kg" is chosen.
+window.TRENO_SIZE_IMAGES = {
+  KETPVC: { prefix: 'pesa-pvc', colors: ['negro', 'rojo', 'rosado'], sizes: [4, 5, 6, 8, 10, 12, 14, 16, 18, 20] },
+  PESHIE: { prefix: 'pesa-hierro', colors: ['negro'], sizes: [4, 6, 8, 10, 12, 14, 16, 18, 20, 22] }
+};
+
 // More built-in views. With a color they belong to that color; without one they are general.
 window.TRENO_EXTRA_IMAGES = {
   PACKCH: [{ file: 'promo-pack-chaleco.jpg' }],

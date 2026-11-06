@@ -12,6 +12,7 @@
   var PRICE_RANGES = { low: [0, 70], mid: [70, 150], high: [150, Infinity] };
   var COLOR_IMAGES = window.TRENO_COLOR_IMAGES || {};
   var EXTRA_IMAGES = window.TRENO_EXTRA_IMAGES || {};
+  var SIZE_IMAGES = window.TRENO_SIZE_IMAGES || {};
   var PRODUCT_HASH = /^#producto\/([A-Z0-9]+)$/;
   var HEART = 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z';
   var SVG_NS = 'http://www.w3.org/2000/svg';
@@ -140,6 +141,18 @@
     return (builtIn ? [IMG + builtIn] : []).concat(extras.map(function (extra) { return IMG + extra.file; }));
   }
 
+  // Photo of the chosen presentation, when its weight has one. Uploaded color photos win.
+  function sizePhoto(p, color) {
+    var config = SIZE_IMAGES[p.id];
+    var variant = pickedVariant(p);
+    if (!config || !variant || config.colors.indexOf(color) < 0) return null;
+    if (urlsOf((p.photos || {})[color]).length) return null;
+    var match = /(\d+(?:[.,]\d+)?)\s*kg/i.exec(variant.label);
+    var weight = match ? Number(match[1].replace(',', '.')) : NaN;
+    if (config.sizes.indexOf(weight) < 0) return null;
+    return IMG + config.prefix + '-' + color + '-' + weight + '.jpg';
+  }
+
   function generalPhotos(p) {
     var uploaded = urlsOf((p.photos || {}).principal);
     if (uploaded.length) return uploaded;
@@ -157,7 +170,13 @@
 
   // What a shopper sees for the chosen color: its photos first, then the general ones.
   function galleryOf(p, color) {
-    var list = colorPhotos(p, color).concat(generalPhotos(p));
+    var size = sizePhoto(p, color);
+    // A weight's photo replaces the main ones, which show a different weight.
+    var list = size
+      ? [size].concat(urlsOf((p.photos || {}).principal), (EXTRA_IMAGES[p.id] || []).filter(function (extra) {
+        return !extra.color;
+      }).map(function (extra) { return IMG + extra.file; }))
+      : colorPhotos(p, color).concat(generalPhotos(p));
     return list.filter(function (src, index) { return list.indexOf(src) === index; });
   }
 
@@ -176,7 +195,8 @@
 
     var img = el('img');
     var color = pickedColor(p);
-    var ownPhotos = colorPhotos(p, color);
+    var size = sizePhoto(p, color);
+    var ownPhotos = size ? [size] : colorPhotos(p, color);
     img.src = ownPhotos[0] || generalPhotos(p)[0] || (p.img ? missingPhoto(p) : fallbackPhoto(p));
     img.alt = p.name;
     img.loading = 'lazy';
@@ -279,7 +299,11 @@
     main.hidden = false;
     byId('product-image-empty').hidden = true;
     if (main.getAttribute('src') !== mainSrc) main.src = mainSrc;
-    byId('product-color-note').hidden = !(hasColorPhotos(p) && !colorPhotos(p, color).length);
+    var note = byId('product-color-note');
+    var otherColor = hasColorPhotos(p) && !colorPhotos(p, color).length;
+    var otherSize = SIZE_IMAGES[p.id] && (p.variants || []).length && !sizePhoto(p, color) && !urlsOf((p.photos || {})[color]).length;
+    note.textContent = otherSize ? 'Foto referencial de otro tamaño' : 'Foto en otro color';
+    note.hidden = !(otherColor || otherSize);
 
     fill(byId('product-thumbs'), gallery.length < 2 ? [] : gallery.map(function (src, index) {
       var thumb = button('product__thumb', undefined, function () { setState({ detailPhoto: src }); });
@@ -303,7 +327,7 @@
       var chip = button('option-chip', option.label, function () {
         var picked = Object.assign({}, state.pickedVariants);
         picked[p.id] = option.id;
-        setState({ pickedVariants: picked });
+        setState({ pickedVariants: picked, detailPhoto: null });
       });
       chip.setAttribute('aria-pressed', String(variant && option.id === variant.id));
       return chip;
