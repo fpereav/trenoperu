@@ -16,6 +16,7 @@ import pg8000.native
 MAX_BODY_BYTES = 20_000
 MAX_LINES = 30
 MAX_QTY = 20
+MAX_STOCK = 100_000
 ORDERS_PER_IP_PER_HOUR = 5
 SESSION_SECONDS = 12 * 60 * 60
 COOKIE = "treno_admin"
@@ -254,6 +255,46 @@ def set_order_status(order_id, status):
     return {"id": order_id, "status": status}
 
 
+def admin_products():
+    conn = connect()
+    try:
+        products = rows(
+            conn,
+            "SELECT id, name, category, price_cents, stock FROM products ORDER BY sort_order",
+        )
+    finally:
+        conn.close()
+    return [
+        {"id": p["id"], "name": p["name"], "cat": p["category"],
+         "price": p["price_cents"] / 100, "stock": p["stock"]}
+        for p in products
+    ]
+
+
+def set_product_stock(product_id, payload):
+    stock, expected = payload.get("stock"), payload.get("expected")
+    for value in (stock, expected):
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= MAX_STOCK:
+            raise ApiError(400, "Escribe una cantidad entera entre 0 y 100000.")
+    conn = connect()
+    try:
+        # Only update if unchanged, so a sale made meanwhile is never overwritten.
+        updated = conn.run(
+            "UPDATE products SET stock = :stock WHERE id = :id AND stock = :expected RETURNING stock",
+            stock=stock,
+            id=product_id,
+            expected=expected,
+        )
+        if updated:
+            return {"id": product_id, "stock": updated[0][0]}
+        found = conn.run("SELECT stock FROM products WHERE id = :id", id=product_id)
+    finally:
+        conn.close()
+    if not found:
+        raise ApiError(404, "Producto no encontrado.")
+    raise ApiError(409, "El stock cambió mientras editabas. Revisa la cantidad actual: " + str(found[0][0]) + ".")
+
+
 def session_secret():
     secret = os.environ.get("ADMIN_SESSION_SECRET")
     if not secret or not os.environ.get("ADMIN_PASSWORD"):
@@ -342,6 +383,13 @@ class handler(BaseHTTPRequestHandler):
         if method == "GET" and path == "/api/admin/orders":
             self.require_admin()
             return self.send_json(200, admin_orders())
+        if method == "GET" and path == "/api/admin/products":
+            self.require_admin()
+            return self.send_json(200, admin_products())
+        product = re.fullmatch(r"/api/admin/products/([A-Z0-9]{1,20})", path)
+        if method == "PATCH" and product:
+            self.require_admin()
+            return self.send_json(200, set_product_stock(product.group(1), self.read_json()))
         match = re.fullmatch(r"/api/admin/orders/(\d{1,12})", path)
         if method == "PATCH" and match:
             self.require_admin()

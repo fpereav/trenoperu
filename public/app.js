@@ -15,6 +15,16 @@
   };
   var CATEGORIES = ['Todo', 'Packs', 'Pesas', 'Yoga', 'Cardio', 'Resistencia', 'Accesorios', 'Funcional', 'Box', 'Recuperación'];
   var PRICE_RANGES = { low: [0, 70], mid: [70, 150], high: [150, Infinity] };
+  // Photos per product color; a missing color falls back to the main photo with a note.
+  var COLOR_IMAGES = {
+    KETPVC: { rosado: 'kettlebell-pvc.jpg', negro: 'kettlebell-pvc-negro.jpg', rojo: 'kettlebell-pvc-rojo.jpg' },
+    MANVIN: { rosado: 'mancuerna-vinilo.jpg', morado: 'mancuerna-vinilo-morado.jpg', rojo: 'mancuerna-vinilo-rojo.jpg' },
+    MATGOM: { rosado: 'mat-goma-eva.jpg', fucsia: 'mat-goma-eva-fucsia.jpg', verde: 'mat-goma-eva-verde.jpg' },
+    TOBPLA: { rosado: 'tobillera-peso.jpg', negro: 'tobillera-peso-negro.jpg', azul: 'tobillera-peso-azul.jpg' },
+    CHASIN: { rosado: 'chaleco-peso.jpg', negro: 'chaleco-peso-negro.jpg', verde: 'chaleco-peso-verde.jpg', plomo: 'chaleco-peso-plomo.jpg' },
+    STEPVC: { azul: 'step-pvc.jpg', plomo: 'step-pvc-plomo.jpg' },
+    GUAPLA: { rojo: 'guantes-box.jpg', negro: 'guantes-box-negro.jpg' }
+  };
   var HEART = 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z';
   var SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -82,7 +92,8 @@
   }
 
   function pickedColor(p) {
-    return state.picked[p.id] && p.colors.indexOf(state.picked[p.id]) >= 0 ? state.picked[p.id] : p.colors[0];
+    if (state.picked[p.id] && p.colors.indexOf(state.picked[p.id]) >= 0) return state.picked[p.id];
+    return state.color && p.colors.indexOf(state.color) >= 0 ? state.color : p.colors[0];
   }
 
   function addToCart(p) {
@@ -109,13 +120,17 @@
     var tile = el('div', 'tile');
 
     var img = el('img');
-    img.src = IMG + p.img;
+    var photos = COLOR_IMAGES[p.id];
+    var color = pickedColor(p);
+    var photo = photos && photos[color];
+    img.src = IMG + (photo || p.img);
     img.alt = p.name;
     img.loading = 'lazy';
     img.addEventListener('error', function () {
       tile.replaceChild(el('div', 'tile__empty', 'Foto próximamente'), img);
     });
     tile.appendChild(img);
+    if (photos && !photo) tile.appendChild(el('span', 'tile__note', 'Foto en otro color'));
 
     var favButton = button('tile__fav', undefined, function () {
       var favs = Object.assign({}, state.favs);

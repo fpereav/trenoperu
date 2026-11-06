@@ -33,7 +33,93 @@
     });
   }
 
+  function showTab(name) {
+    var stock = name === 'stock';
+    byId('tabs').hidden = false;
+    byId('panel').hidden = stock;
+    byId('stock-panel').hidden = !stock;
+    byId('tab-orders').setAttribute('aria-pressed', String(!stock));
+    byId('tab-stock').setAttribute('aria-pressed', String(stock));
+    if (stock) loadStock();
+    else loadOrders();
+  }
+
+  function stockRow(product) {
+    var row = document.createElement('tr');
+    var name = cell([product.name]);
+    if (product.stock === 0 || product.stock <= 2) {
+      var low = document.createElement('span');
+      low.className = 'stock-low';
+      low.textContent = product.stock === 0 ? 'Agotado' : 'Stock bajo';
+      name.firstChild.appendChild(low);
+    }
+    row.appendChild(name);
+    row.appendChild(cell([product.cat]));
+    row.appendChild(cell([money(product.price)]));
+
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.min = '0';
+    input.max = '100000';
+    input.step = '1';
+    input.value = product.stock;
+    input.className = 'stock-input';
+    input.setAttribute('aria-label', 'Stock de ' + product.name);
+    var inputCell = document.createElement('td');
+    inputCell.appendChild(input);
+    row.appendChild(inputCell);
+
+    var save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'stock-save';
+    save.textContent = 'Guardar';
+    save.disabled = true;
+    save.setAttribute('aria-label', 'Guardar stock de ' + product.name);
+    input.addEventListener('input', function () {
+      save.textContent = 'Guardar';
+      save.disabled = input.value === String(product.stock);
+    });
+    save.addEventListener('click', function () {
+      var value = Number(input.value);
+      var box = byId('stock-error');
+      box.hidden = true;
+      save.disabled = true;
+      api('/api/admin/products/' + product.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stock: value, expected: product.stock })
+      }).then(function () {
+        return loadStock();
+      }).then(function () {
+        var saved = document.querySelector('[aria-label="Guardar stock de ' + product.name + '"]');
+        if (saved) saved.textContent = 'Guardado';
+      }).catch(function (error) {
+        if (error.status === 401) return showLogin('Tu sesión expiró.');
+        box.textContent = error.message;
+        box.hidden = false;
+        loadStock();
+      });
+    });
+    var saveCell = document.createElement('td');
+    saveCell.appendChild(save);
+    row.appendChild(saveCell);
+    return row;
+  }
+
+  function loadStock() {
+    return api('/api/admin/products').then(function (products) {
+      byId('stock-rows').replaceChildren.apply(byId('stock-rows'), products.map(stockRow));
+    }).catch(function (error) {
+      if (error.status === 401) return showLogin('Tu sesión expiró.');
+      var box = byId('stock-error');
+      box.textContent = error.message;
+      box.hidden = false;
+    });
+  }
+
   function showLogin(message) {
+    byId('tabs').hidden = true;
+    byId('stock-panel').hidden = true;
     byId('panel').hidden = true;
     byId('logout').hidden = true;
     byId('login').hidden = false;
@@ -108,7 +194,8 @@
     return api('/api/admin/orders').then(function (list) {
       orders = list;
       byId('login').hidden = true;
-      byId('panel').hidden = false;
+      byId('tabs').hidden = false;
+      byId('panel').hidden = byId('tab-stock').getAttribute('aria-pressed') === 'true';
       byId('logout').hidden = false;
       render();
     }).catch(function (error) {
@@ -140,5 +227,7 @@
   });
 
   byId('filter').addEventListener('change', render);
+  byId('tab-orders').addEventListener('click', function () { showTab('orders'); });
+  byId('tab-stock').addEventListener('click', function () { showTab('stock'); });
   loadOrders();
 })();
