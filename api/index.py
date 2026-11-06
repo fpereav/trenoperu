@@ -370,11 +370,17 @@ class handler(BaseHTTPRequestHandler):
         if method == "POST" and path == "/api/orders":
             return self.send_json(201, create_order(self.read_json(), self.client_ip()))
         if method == "POST" and path == "/api/admin/login":
-            password = self.read_json().get("password")
+            credentials = self.read_json()
+            username, password = credentials.get("username"), credentials.get("password")
             secret = session_secret()
-            expected = os.environ["ADMIN_PASSWORD"].encode()
-            if not isinstance(password, str) or not hmac.compare_digest(password.encode(), expected):
-                raise ApiError(401, "Contraseña incorrecta.")
+            if not isinstance(username, str) or not isinstance(password, str):
+                raise ApiError(401, "Usuario o contraseña incorrectos.")
+            expected_username = os.environ.get("ADMIN_USERNAME", "admin").encode()
+            # Compare both, so the response does not reveal which one was wrong.
+            username_ok = hmac.compare_digest(username.strip().encode(), expected_username)
+            password_ok = hmac.compare_digest(password.encode(), os.environ["ADMIN_PASSWORD"].encode())
+            if not (username_ok and password_ok):
+                raise ApiError(401, "Usuario o contraseña incorrectos.")
             expires = int(time.time()) + SESSION_SECONDS
             token = f"{expires}.{hmac.new(secret, str(expires).encode(), hashlib.sha256).hexdigest()}"
             return self.send_json(200, {"ok": True}, cookie_header(token, SESSION_SECONDS))

@@ -5,6 +5,7 @@ Catálogo y pedidos de TRENO: página estática (`public/`), API en Python (`api
 ## Variables de entorno
 
 - `DATABASE_URL`: la crea la integración de Neon en Vercel.
+- `ADMIN_USERNAME`: usuario del panel `/admin` (por defecto, `admin`).
 - `ADMIN_PASSWORD`: contraseña del panel `/admin`.
 - `ADMIN_SESSION_SECRET`: clave con la que se firman las sesiones del panel.
 

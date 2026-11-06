@@ -126,7 +126,7 @@
     var error = byId('login-error');
     error.hidden = !message;
     error.textContent = message || '';
-    byId('password').focus();
+    byId('username').focus();
   }
 
   function statusSelect(order) {
@@ -209,7 +209,7 @@
     api('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: password.value })
+      body: JSON.stringify({ username: byId('username').value, password: password.value })
     }).then(function () {
       password.value = '';
       return loadOrders();

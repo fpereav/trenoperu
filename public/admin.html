@@ -34,6 +34,8 @@ td ul{margin:0;padding:0;list-style:none}
   <main style="max-width: 1440px; margin: 0 auto; padding: 24px 32px 64px">
     <form id="login" hidden style="max-width: 360px; margin: 48px auto; display: flex; flex-direction: column; gap: 12px">
       <h1 style="margin: 0 0 8px; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 36px; text-transform: uppercase">Iniciar sesión</h1>
+      <label for="username" style="font-size: 13px; font-weight: 600">Usuario</label>
+      <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px">
       <label for="password" style="font-size: 13px; font-weight: 600">Contraseña</label>
       <input id="password" name="password" type="password" autocomplete="current-password" required style="height: 44px; padding: 0 12px; border: 1px solid #8A8D91; font: inherit; font-size: 14px">
       <p id="login-error" role="alert" hidden style="margin: 0; font-size: 14px; color: #B3123F"></p>
