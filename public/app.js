@@ -367,14 +367,6 @@
     setState({ cat: 'Todo', color: null, query: '', prices: {}, inStockOnly: false, onlyFavs: false });
   }
 
-  function bindFiltersPanel() {
-    // Always open beside the catalog on wide screens; collapsible on phones.
-    var wide = window.matchMedia('(min-width: 901px)');
-    function sync() { byId('filters').open = wide.matches; }
-    wide.addEventListener('change', sync);
-    sync();
-  }
-
   function bindEvents() {
     byId('clear-color').addEventListener('click', function () { setState({ color: null }); });
     byId('clear-filters').addEventListener('click', clearFilters);
@@ -414,7 +406,6 @@
   }
 
   bindEvents();
-  bindFiltersPanel();
   render();
   loadProducts();
 })();
