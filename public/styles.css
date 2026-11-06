@@ -222,6 +222,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .cart__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .cart__head .display { font-size: 32px; }
 .cart__done { margin-top: 16px; padding: 16px; border-radius: 4px; background: #FFE4EB; }
+.pay__title { margin: 0 0 4px; font-size: 18px; font-weight: 700; line-height: 1.3; }
+.pay__summary { margin: 0 0 12px; font-size: 15px; }
+.pay__qr { display: block; width: min(280px, 100%); height: auto; margin: 0 auto 12px; border-radius: 8px; }
+.pay__action { display: flex; width: 100%; margin-bottom: 8px; }
+.pay__steps { margin: 12px 0; padding-left: 20px; font-size: 14px; }
 .cart__empty { margin: 24px 0; color: #444444; }
 .cart__lines { margin: 8px 0 0; padding: 0; list-style: none; }
 .cart-line { display: flex; flex-direction: column; gap: 8px; padding-block: 14px; border-bottom: 1px solid var(--line); }

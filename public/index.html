@@ -74,7 +74,7 @@
     <ul class="benefits wrap">
       <li>Delivery a todo el Perú</li>
       <li>Pedidos al 957 503 022</li>
-      <li>Pago y entrega coordinados contigo</li>
+      <li>Paga fácil con Yape</li>
     </ul>
 
     <section id="catalogo" class="catalog wrap" aria-labelledby="catalog-title">
@@ -173,7 +173,7 @@
         <div class="product__label">Color</div>
         <div id="product-swatches" class="swatches product__swatches"></div>
         <button id="product-add" class="button" type="button">Agregar al carrito</button>
-        <p class="checkout__note">Coordinamos el pago y el delivery contigo al confirmar tu pedido.</p>
+        <p class="checkout__note">Pagas con Yape al confirmar tu pedido. El costo de delivery se coordina aparte.</p>
       </div>
     </div>
   </dialog>
@@ -184,20 +184,30 @@
       <button id="cart-close" class="link-button" type="button">Cerrar</button>
     </div>
     <div id="cart-done" class="cart__done" role="status" hidden>
-      <strong>¡Recibimos tu pedido <span id="done-order"></span>!</strong> Total: <span id="done-total"></span>. Te contactaremos para coordinar el pago y la entrega. También puedes llamarnos al 957 503 022.
+      <h3 class="pay__title">Paga con Yape para confirmar tu pedido</h3>
+      <p class="pay__summary">Pedido <strong id="done-order"></strong> · Total: <strong id="done-total"></strong></p>
+      <img class="pay__qr" src="assets/img/yape-qr.jpg" width="1320" height="1944" alt="Código QR de Yape a nombre de Fernando Perea Villa">
+      <a class="button button--outline pay__action" href="assets/img/yape-qr.jpg" download="yape-treno.jpg">Descargar QR</a>
+      <ol class="pay__steps">
+        <li>Abre Yape y escanea este QR.</li>
+        <li>Yapea el total de tu pedido.</li>
+        <li>Envíanos la constancia por WhatsApp con tu número de pedido.</li>
+      </ol>
+      <a id="done-whatsapp" class="button pay__action" href="https://wa.me/51957503022">Enviar constancia por WhatsApp</a>
+      <p class="checkout__note">El total no incluye delivery; te confirmamos ese costo por WhatsApp. Si estás en el celular, descarga el QR para usarlo en Yape, o llámanos al 957 503 022.</p>
     </div>
     <p id="cart-empty" class="cart__empty">Tu carrito está vacío.</p>
     <ul id="cart-lines" class="cart__lines"></ul>
     <form id="checkout" class="checkout" hidden>
       <div class="checkout__total"><span>Total</span><span id="cart-total"></span></div>
-      <p class="checkout__note">No se cobra nada en esta página. Confirmas tu pedido y te contactamos para coordinar el pago y el costo de delivery.</p>
+      <p class="checkout__note">Completa tus datos y confirma. Luego verás el QR de Yape para pagar. El costo de delivery se coordina aparte.</p>
       <label class="field">Nombre completo<input name="name" required maxlength="120" autocomplete="name"></label>
       <label class="field">Teléfono<input name="phone" type="tel" required maxlength="20" autocomplete="tel"></label>
       <label class="field">Dirección<input name="address" required maxlength="240" autocomplete="street-address"></label>
       <label class="field">Distrito o ciudad<input name="city" required maxlength="80"></label>
       <label class="field">Notas (opcional)<textarea name="notes" rows="2" maxlength="500"></textarea></label>
       <p id="checkout-error" class="form-error" role="alert" hidden></p>
-      <button id="checkout-submit" class="button" type="submit">Confirmar pedido</button>
+      <button id="checkout-submit" class="button" type="submit">Confirmar y ver QR de Yape</button>
     </form>
   </dialog>
 
