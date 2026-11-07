@@ -185,6 +185,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .about__intro .display { font-size: clamp(40px, 5vw, 60px); }
 .about__lead { margin: 8px 0 0; color: var(--accent); font-size: 18px; font-weight: 700; }
 .about__body p { margin: 0 0 12px; font-size: 16px; }
+.about__body .about__motto { margin-top: 16px; font-family: var(--display); font-size: 22px; font-weight: 700; text-transform: uppercase; }
 .about__points { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 24px; padding: 0; list-style: none; }
 .about__points li { padding: 6px 12px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 18px; font-size: 13px; font-weight: 600; }
 .about__actions { display: flex; flex-wrap: wrap; gap: 8px; }

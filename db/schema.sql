@@ -163,3 +163,31 @@ WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO data_migrations (name) VALUES ('vest_packs') ON CONFLICT (name) DO NOTHING;
+
+-- One-time richer descriptions from the store's Instagram posts.
+-- Only replaces a description that still has its default text.
+UPDATE products p SET description = n.description
+FROM (VALUES
+  ('MATGOM', 'Mat de goma EVA de 8 mm para yoga, estiramientos y ejercicios en el piso.',
+   'Mat de goma EVA de 8 mm, 100 % no tóxico e hipoalergénico. Mide 180 × 58 cm, no se desliza durante el entrenamiento y trae sujetadores para llevarlo a todos lados.'),
+  ('BANLAT', 'Set de 5 bandas de látex de colores para ejercicios de fuerza y tonificación.',
+   'Set de 5 bandas de 100 % látex natural con 5 intensidades: leve, moderada, regular, fuerte e intensiva. Miden 60 × 5 cm. Ideales para fuerza, pilates, glúteos y piernas.'),
+  ('KETPVC', 'Pesa rusa de PVC para ejercicios de fuerza y resistencia en casa.',
+   'Pesa rusa de hierro fundido reforzada con PVC para un mejor agarre. Trabaja todo el cuerpo en un solo ejercicio, en casa, en el parque o en el gym.'),
+  ('CHASIN', 'Chaleco con peso para aumentar la intensidad de tus entrenamientos.',
+   'Chaleco lastrado acolchado y ajustable, con rellenos de arena removibles para regular el peso. Ideal para correr, caminar y entrenar fuerza.'),
+  ('TOBPLA', 'Tobillera con peso para añadir resistencia a tus ejercicios de piernas y caminatas.',
+   'Tobillera con peso, ajustable y cómoda, para activar piernas y glúteos: elevaciones, kickbacks, puente de glúteos y más.'),
+  ('MANVIN', 'Mancuerna de vinilo de 1 kg para tonificar brazos y hombros.',
+   'Mancuerna de vinilo de 1 kg para entrenamientos de fuerza. Ayuda a tonificar brazos y hombros y a mejorar tu resistencia.'),
+  ('PACKCH', 'Pack con chaleco lastrado de 10 kg y tobilleras de 1 kg, ajustables, para sumar resistencia a tus entrenamientos.',
+   'Pack con chaleco lastrado de 10 kg y tobilleras de 1 kg, ajustables, para sumar resistencia a tus entrenamientos. Más resistencia, más intensidad y más opciones para entrenar.'),
+  ('PACK15', 'Pack con chaleco lastrado de 15 kg y tobilleras de 2 kg, ajustables, para sumar resistencia a tus entrenamientos.',
+   'Pack con chaleco lastrado de 15 kg y tobilleras de 2 kg, ajustables, para sumar resistencia a tus entrenamientos. Más resistencia, más intensidad y más opciones para entrenar.'),
+  ('PACK20', 'Pack con chaleco lastrado de 20 kg y tobilleras de 2 kg, ajustables, para sumar resistencia a tus entrenamientos.',
+   'Pack con chaleco lastrado de 20 kg y tobilleras de 2 kg, ajustables, para sumar resistencia a tus entrenamientos. Más resistencia, más intensidad y más opciones para entrenar.')
+) AS n (id, old_description, description)
+WHERE p.id = n.id AND p.description = n.old_description
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'instagram_descriptions');
+
+INSERT INTO data_migrations (name) VALUES ('instagram_descriptions') ON CONFLICT (name) DO NOTHING;
