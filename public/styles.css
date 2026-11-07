@@ -254,6 +254,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 @media (max-width: 900px) {
+  .benefits { display: none; }
   /* Too small to tap on the image: show real buttons under the banner. */
   .hero__actions { display: flex; flex-direction: column; gap: 8px; padding: 12px var(--page-pad) 16px; }
   .hero__action { position: static; width: auto; height: auto; min-height: 44px; padding: 12px; border-radius: 4px; color: #111111; font-size: 13px; font-weight: 700; letter-spacing: 0.05em; line-height: 1.2; text-align: center; text-decoration: none; text-transform: uppercase; }
@@ -274,7 +275,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .search { flex: 1 1 auto; }
   .section-title { font-size: 30px; }
   .catalog { padding-top: 32px; }
-  .benefits { grid-template-columns: minmax(0, 1fr); padding-block: 12px; }
   .chips { flex-wrap: nowrap; justify-content: flex-start; margin-inline: calc(var(--page-pad) * -1); padding-inline: var(--page-pad); overflow-x: auto; scrollbar-width: none; }
   .chips::-webkit-scrollbar { display: none; }
   .toolbar__count { display: none; }
