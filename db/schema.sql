@@ -147,3 +147,19 @@ WHERE id = 'PESHIE' AND name = 'Pesa rusa hierro 12 kg'
   AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'kettlebell_options');
 
 INSERT INTO data_migrations (name) VALUES ('kettlebell_options') ON CONFLICT (name) DO NOTHING;
+
+-- One-time load of the larger vest packs, placed right after the first pack.
+UPDATE products SET sort_order = sort_order + 2
+WHERE sort_order > 0
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs');
+
+INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, top, sort_order)
+SELECT o.id, o.name, o.description, 'Packs', o.price, o.image, '["negro"]'::jsonb, 2, false, o.position
+FROM (VALUES
+  ('PACK15', 'Pack chaleco 15 kg + tobilleras 2 kg', 'Pack con chaleco lastrado de 15 kg y tobilleras de 2 kg, ajustables, para sumar resistencia a tus entrenamientos.', 8900, 'pack-chaleco-15-tobilleras-2.jpg', 1),
+  ('PACK20', 'Pack chaleco 20 kg + tobilleras 2 kg', 'Pack con chaleco lastrado de 20 kg y tobilleras de 2 kg, ajustables, para sumar resistencia a tus entrenamientos.', 10900, 'pack-chaleco-20-tobilleras-2.jpg', 2)
+) AS o (id, name, description, price, image, position)
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO data_migrations (name) VALUES ('vest_packs') ON CONFLICT (name) DO NOTHING;
