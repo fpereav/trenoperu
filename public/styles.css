@@ -90,6 +90,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .site-nav { display: flex; gap: 24px; min-width: 0; overflow-x: auto; scrollbar-width: none; font-size: 14px; font-weight: 700; text-transform: uppercase; }
 .site-nav::-webkit-scrollbar { display: none; }
 .site-nav a { flex: none; padding-block: 12px; text-decoration: none; }
+.site-nav__groups { display: contents; }
+.site-nav a[aria-current] { color: var(--accent-text); }
 .site-header__tools { display: flex; flex: 1 1 260px; align-items: center; justify-content: flex-end; gap: 4px; }
 .search { display: flex; flex: 0 1 240px; align-items: center; gap: 8px; min-width: 0; height: 44px; padding: 0 14px; margin-right: 8px; border-radius: 4px; background: var(--soft); }
 .search input { width: 100%; min-width: 0; border: 0; background: transparent; font-size: 14px; outline: none; }

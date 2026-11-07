@@ -459,6 +459,32 @@
     }));
   }
 
+  // The menu lists the same groups as the home tiles, after "Conócenos".
+  var navGroupNames = '';
+  function renderNav() {
+    var groups = groupedEntries(catalogEntries());
+    var names = groups.map(function (group) { return group.name; });
+    var container = byId('nav-groups');
+    if (names.join('|') !== navGroupNames) {
+      navGroupNames = names.join('|');
+      fill(container, names.map(function (name) {
+        var link = el('a', undefined, name);
+        link.href = '#catalogo';
+        link.dataset.group = name;
+        link.addEventListener('click', function (event) {
+          event.preventDefault();
+          clearFilters();
+          pickGroup(name);
+        });
+        return link;
+      }));
+    }
+    container.querySelectorAll('a').forEach(function (link) {
+      if (link.dataset.group === state.group) link.setAttribute('aria-current', 'true');
+      else link.removeAttribute('aria-current');
+    });
+  }
+
   function pickGroup(name) {
     setState({ group: name, cat: 'Todo' });
     byId('catalogo').scrollIntoView();
@@ -539,6 +565,7 @@
     var list = visibleProducts();
     fill(byId('grid'), list.map(productCard));
     renderGroups();
+    renderNav();
     byId('catalog-title').textContent = state.group || 'Todos los productos';
     byId('show-all').hidden = !state.group;
     var pack = products.find(function (p) { return p.id === PACK_ID; });
