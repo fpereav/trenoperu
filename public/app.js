@@ -8,7 +8,6 @@
   var FAVS_KEY = 'treno.favs';
 
   var COLORS = window.TRENO_COLORS;
-  var CATEGORIES = ['Todo', 'Packs', 'Pesas', 'Yoga', 'Cardio', 'Resistencia', 'Accesorios', 'Funcional', 'Box', 'Recuperación'];
   var PRICE_RANGES = { low: [0, 70], mid: [70, 150], high: [150, Infinity] };
   var COLOR_IMAGES = window.TRENO_COLOR_IMAGES || {};
   var EXTRA_IMAGES = window.TRENO_EXTRA_IMAGES || {};
@@ -523,17 +522,13 @@
   }
 
   function renderFilters() {
-    // Only categories with something on sale.
-    var added = [];
-    products.forEach(function (p) {
-      if (CATEGORIES.indexOf(p.cat) < 0 && added.indexOf(p.cat) < 0) added.push(p.cat);
-    });
-    fill(byId('cats'), CATEGORIES.concat(added).filter(function (name) {
-      return name === 'Todo' || name === state.cat || !state.loaded ||
-        products.some(function (p) { return p.cat === name; });
-    }).map(function (name) {
-      var chip = button('chip', name, function () { setState({ cat: name, group: null }); });
-      chip.setAttribute('aria-pressed', String(state.cat === name));
+    // The same groups as the home tiles and the menu, only those with something on sale.
+    var names = groupedEntries(catalogEntries()).map(function (group) { return group.name; });
+    if (state.group && names.indexOf(state.group) < 0) names.push(state.group);
+    fill(byId('cats'), ['Todo'].concat(names).map(function (name) {
+      var all = name === 'Todo';
+      var chip = button('chip', name, function () { setState({ group: all ? null : name, cat: 'Todo' }); });
+      chip.setAttribute('aria-pressed', String(all ? !state.group && state.cat === 'Todo' : state.group === name));
       return chip;
     }));
 
