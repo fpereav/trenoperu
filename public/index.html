@@ -69,8 +69,14 @@
       <li>Paga fácil con Yape</li>
     </ul>
 
+    <section id="groups" class="groups wrap" aria-labelledby="groups-title">
+      <h2 id="groups-title" class="section-title">Compra por tipo</h2>
+      <div id="groups-grid" class="groups__grid"></div>
+    </section>
+
     <section id="catalogo" class="catalog wrap" aria-labelledby="catalog-title">
-      <h2 id="catalog-title" class="section-title">Equípate para entrenar</h2>
+      <h2 id="catalog-title" class="section-title">Todos los productos</h2>
+      <p class="catalog__back"><button id="show-all" class="link-button" type="button" hidden>← Ver todos los productos</button></p>
       <p class="catalog__intro">Pesas, mats, bandas y accesorios para entrenar en casa, en el parque o donde quieras.</p>
 
       <div id="cats" class="chips" role="group" aria-label="Categorías"></div>
@@ -107,27 +113,6 @@
       <div id="grid" class="product-grid"></div>
     </section>
 
-    <section class="promos wrap" aria-label="Categorías destacadas">
-      <a class="promo-tile" href="#catalogo" data-cat-link="Pesas">
-        <span class="promo-tile__eyebrow">Fuerza</span>
-        <span class="promo-tile__title">Pesas</span>
-        <span class="promo-tile__cta">Ver productos</span>
-        <span class="promo-tile__media"><img src="assets/img/pesa-rusa-hierro.jpg" alt="" loading="lazy"></span>
-      </a>
-      <a class="promo-tile" href="#catalogo" data-cat-link="Yoga">
-        <span class="promo-tile__eyebrow">Movilidad</span>
-        <span class="promo-tile__title">Yoga</span>
-        <span class="promo-tile__cta">Ver productos</span>
-        <span class="promo-tile__media"><img src="assets/img/mat-goma-eva.jpg" alt="" loading="lazy"></span>
-      </a>
-      <a class="promo-tile" href="#catalogo" data-cat-link="Resistencia">
-        <span class="promo-tile__eyebrow">Tonifica</span>
-        <span class="promo-tile__title">Resistencia</span>
-        <span class="promo-tile__cta">Ver productos</span>
-        <span class="promo-tile__media"><img src="assets/img/bandas-latex.jpg" alt="" loading="lazy"></span>
-      </a>
-    </section>
-
     <section class="social wrap">
       <h2 class="section-title">Síguenos en Instagram</h2>
       <p class="social__link"><a class="button button--outline" href="https://www.instagram.com/treno_peru">Ver @treno_peru</a></p>
@@ -144,6 +129,26 @@
       </div>
     </div>
   </footer>
+
+  <div class="wa">
+    <section id="wa-panel" class="wa__panel" aria-labelledby="wa-title" hidden>
+      <div class="wa__head">
+        <h2 id="wa-title" class="wa__title">Preguntas frecuentes</h2>
+        <button id="wa-close" class="wa__close" type="button" aria-label="Cerrar preguntas frecuentes">×</button>
+      </div>
+      <div class="wa__list">
+        <details class="wa__item"><summary>¿Cómo compro?</summary><p>Agrega tus productos al carrito, toca Continuar, completa tus datos de entrega y confirma tu pedido. Verás el QR de Yape para pagar.</p></details>
+        <details class="wa__item"><summary>¿Cómo pago?</summary><p>Con Yape, usando el QR que aparece al confirmar tu pedido. Si compras desde el celular, puedes descargar el QR.</p></details>
+        <details class="wa__item"><summary>¿Cómo confirmo mi pago?</summary><p>Envíanos la constancia por WhatsApp junto con tu número de pedido.</p></details>
+        <details class="wa__item"><summary>¿Hacen delivery?</summary><p>Sí, hacemos delivery a todo el Perú.</p></details>
+        <details class="wa__item"><summary>¿El delivery está incluido?</summary><p>No, el precio no incluye delivery. Te confirmamos el costo por WhatsApp.</p></details>
+        <details class="wa__item"><summary>¿Tienen más pesos o colores?</summary><p>Elige el peso y el color en cada producto. Si no encuentras lo que buscas, escríbenos.</p></details>
+        <details class="wa__item"><summary>¿Me pueden armar un pack?</summary><p>Sí, escríbenos por WhatsApp y te armamos un pack a tu medida.</p></details>
+      </div>
+      <a class="wa__chat" href="https://wa.me/51957503022?text=Hola%2C%20tengo%20una%20consulta" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.200l-.3-.2-3 .8.8-2.900-.2-.3A8.200 8.200 0 1 1 12 20.200zm4.500-6.100c-.2-.1-1.400-.7-1.600-.8-.2-.1-.4-.1-.6.100l-.7.900c-.1.200-.3.200-.5.100-.7-.300-1.500-.700-2.300-1.500-.600-.600-1.100-1.300-1.200-1.500-.100-.200 0-.400.100-.500l.400-.500.200-.400c.100-.100 0-.300 0-.400l-.700-1.700c-.200-.400-.400-.400-.600-.400h-.500c-.200 0-.400.100-.600.300-.200.200-.800.800-.800 2s.800 2.300.900 2.500c.100.200 1.700 2.600 4.100 3.600 2 .800 2.400.700 2.800.600.500 0 1.400-.600 1.600-1.100.200-.500.200-1 .100-1.100-.100-.200-.200-.200-.500-.300z"/></svg>Conversar por WhatsApp</a>
+    </section>
+    <button id="wa-toggle" class="wa__toggle" type="button" aria-label="Abrir ayuda y WhatsApp" aria-expanded="false" aria-controls="wa-panel"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.200l-.3-.2-3 .8.8-2.900-.2-.3A8.200 8.200 0 1 1 12 20.200zm4.500-6.100c-.2-.1-1.400-.7-1.600-.8-.2-.1-.4-.1-.6.100l-.7.900c-.1.200-.3.200-.5.100-.7-.300-1.500-.700-2.300-1.500-.600-.600-1.100-1.300-1.200-1.500-.100-.200 0-.400.100-.500l.400-.500.200-.400c.100-.100 0-.300 0-.400l-.700-1.700c-.200-.400-.400-.400-.600-.400h-.500c-.200 0-.400.100-.600.300-.200.200-.800.800-.800 2s.800 2.300.900 2.500c.100.200 1.700 2.600 4.100 3.600 2 .800 2.400.700 2.800.600.500 0 1.400-.600 1.600-1.100.200-.500.200-1 .100-1.100-.100-.200-.200-.200-.500-.300z"/></svg></button>
+  </div>
 
   <dialog id="product" class="product" aria-labelledby="product-name">
     <button id="product-close" class="product__close" type="button" aria-label="Cerrar">×</button>

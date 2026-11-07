@@ -21,7 +21,7 @@
   var state = {
     cat: 'Todo', color: null, sort: 'rel', query: '', prices: {}, onlyFavs: false,
     favs: load(FAVS_KEY, {}), cart: load(CART_KEY, []), picked: {}, loadError: false,
-    detailId: null, detailPhoto: null, loaded: false, pickedVariants: {}, cardColors: {}, cartStep: 'items'
+    detailId: null, detailPhoto: null, loaded: false, pickedVariants: {}, cardColors: {}, cartStep: 'items', group: null
   };
 
   function load(key, fallback) {
@@ -391,6 +391,79 @@
     return Object.keys(state.prices).filter(function (k) { return state.prices[k]; });
   }
 
+  // Catalog groups, in display order, detected from the product name.
+  var PRODUCT_GROUPS = [
+    ['Packs', /\bpacks?\b/],
+    ['Pesas rusas', /pesas? rusas?|kettlebell/],
+    ['Mancuernas', /mancuerna/],
+    ['Chalecos con peso', /chaleco/],
+    ['Tobilleras', /tobillera/],
+    ['Mats', /\bmats?\b/],
+    ['Bandas de resistencia', /\bbandas?\b/],
+    ['Sogas para saltar', /\bsogas?\b/],
+    ['Steps', /\bsteps?\b/],
+    ['TRX', /\btrx\b/],
+    ['Guantes de box', /guantes?/],
+    ['Rollers', /\brollers?\b/]
+  ];
+
+  // Products that match no group fall under their category, after the known groups.
+  function groupNameOf(p) {
+    var name = normalize(p.name);
+    var match = PRODUCT_GROUPS.find(function (group) { return group[1].test(name); });
+    return match ? match[0] : p.cat;
+  }
+
+  function groupedEntries(list) {
+    var groups = [];
+    list.forEach(function (entry) {
+      var name = groupNameOf(entry.product);
+      var group = groups.find(function (g) { return g.name === name; });
+      if (!group) {
+        group = { name: name, entries: [] };
+        groups.push(group);
+      }
+      group.entries.push(entry);
+    });
+    function rank(group) {
+      var index = PRODUCT_GROUPS.findIndex(function (known) { return known[0] === group.name; });
+      return index < 0 ? PRODUCT_GROUPS.length : index;
+    }
+    return groups.sort(function (a, b) { return rank(a) - rank(b); });
+  }
+
+  function groupPhoto(entry) {
+    var p = entry.product;
+    var color = pickedColor(p, entry.variant);
+    var size = entry.variant ? sizePhoto(p, color, entry.variant) : null;
+    return size || colorPhotos(p, color)[0] || generalPhotos(p)[0] || fallbackPhoto(p);
+  }
+
+  function renderGroups() {
+    var groups = groupedEntries(catalogEntries());
+    var section = byId('groups');
+    section.hidden = groups.length === 0 || hasActiveFilters();
+    fill(byId('groups-grid'), groups.map(function (group) {
+      var tile = button('group-tile', undefined, function () { pickGroup(group.name); });
+      var media = el('span', 'group-tile__media');
+      var image = el('img');
+      image.src = groupPhoto(group.entries[0]);
+      image.alt = '';
+      image.loading = 'lazy';
+      image.addEventListener('error', function () { image.remove(); });
+      media.appendChild(image);
+      tile.appendChild(media);
+      tile.appendChild(el('span', 'group-tile__name', group.name));
+      tile.appendChild(el('span', 'group-tile__count', group.entries.length + (group.entries.length === 1 ? ' producto' : ' productos')));
+      return tile;
+    }));
+  }
+
+  function pickGroup(name) {
+    setState({ group: name, cat: 'Todo' });
+    byId('catalogo').scrollIntoView();
+  }
+
   // One catalog entry per option, or one for a product without options.
   function catalogEntries() {
     var entries = [];
@@ -409,6 +482,7 @@
     var ranges = activePriceRanges();
     var list = catalogEntries().filter(function (entry) {
       var p = entry.product;
+      if (state.group && groupNameOf(p) !== state.group) return false;
       if (state.cat !== 'Todo' && p.cat !== state.cat) return false;
       if (state.color && p.colors.indexOf(state.color) < 0) return false;
       if (state.onlyFavs && !state.favs[p.id]) return false;
@@ -432,7 +506,7 @@
       return name === 'Todo' || name === state.cat || !state.loaded ||
         products.some(function (p) { return p.cat === name; });
     }).map(function (name) {
-      var chip = button('chip', name, function () { setState({ cat: name }); });
+      var chip = button('chip', name, function () { setState({ cat: name, group: null }); });
       chip.setAttribute('aria-pressed', String(state.cat === name));
       return chip;
     }));
@@ -457,13 +531,16 @@
   }
 
   function hasActiveFilters() {
-    return state.cat !== 'Todo' || !!state.color || !!state.query.trim() || state.onlyFavs ||
+    return !!state.group || state.cat !== 'Todo' || !!state.color || !!state.query.trim() || state.onlyFavs ||
       activePriceRanges().length > 0;
   }
 
   function renderProducts() {
     var list = visibleProducts();
     fill(byId('grid'), list.map(productCard));
+    renderGroups();
+    byId('catalog-title').textContent = state.group || 'Todos los productos';
+    byId('show-all').hidden = !state.group;
     var pack = products.find(function (p) { return p.id === PACK_ID; });
     // Before the catalog loads, keep the banner; once loaded, it needs the pack on sale.
     byId('promo').hidden = hasActiveFilters() || (state.loaded && !pack);
@@ -635,12 +712,28 @@
   function clearFilters() {
     byId('search').value = '';
     document.querySelectorAll('[data-price]').forEach(function (box) { box.checked = false; });
-    setState({ cat: 'Todo', color: null, query: '', prices: {}, onlyFavs: false });
+    setState({ cat: 'Todo', group: null, color: null, query: '', prices: {}, onlyFavs: false });
   }
 
   function bindEvents() {
     byId('clear-color').addEventListener('click', function () { setState({ color: null }); });
     byId('clear-filters').addEventListener('click', clearFilters);
+    function setHelpOpen(open) {
+      byId('wa-panel').hidden = !open;
+      byId('wa-toggle').setAttribute('aria-expanded', String(open));
+    }
+    byId('wa-toggle').addEventListener('click', function () { setHelpOpen(byId('wa-panel').hidden); });
+    byId('wa-close').addEventListener('click', function () {
+      setHelpOpen(false);
+      byId('wa-toggle').focus();
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !byId('wa-panel').hidden) {
+        setHelpOpen(false);
+        byId('wa-toggle').focus();
+      }
+    });
+    byId('show-all').addEventListener('click', function () { setState({ group: null }); });
     byId('search').addEventListener('input', function (e) { setState({ query: e.target.value }); });
     byId('sort').addEventListener('change', function (e) { setState({ sort: e.target.value }); });
     byId('favs-toggle').addEventListener('click', function () { setState({ onlyFavs: !state.onlyFavs }); });
