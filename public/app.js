@@ -561,7 +561,7 @@
     fill(byId('grid'), list.map(productCard));
     renderGroups();
     renderNav();
-    byId('catalog-title').textContent = state.group || 'Todos los productos';
+    byId('catalog-title').textContent = state.group || 'Nuestro catálogo';
     byId('show-all').hidden = !state.group;
     var pack = products.find(function (p) { return p.id === PACK_ID; });
     // Before the catalog loads, keep the banner; once loaded, it needs the pack on sale.
