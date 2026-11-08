@@ -3,7 +3,6 @@
 
   var ACCENT = '#FF4670';
   var IMG = 'assets/img/';
-  var PACK_ID = 'PACKCH';
   var CART_KEY = 'treno.cart';
   var FAVS_KEY = 'treno.favs';
 
@@ -484,6 +483,52 @@
     });
   }
 
+  // Promo banners that change by themselves. Each one needs its pack on sale.
+  var heroIndex = 0;
+  var heroPaused = false;
+  function heroSlides() {
+    return Array.prototype.filter.call(document.querySelectorAll('.hero__slide'), function (slide) { return !slide.hidden; });
+  }
+
+  function showSlide(index) {
+    var slides = heroSlides();
+    if (!slides.length) return;
+    heroIndex = (index + slides.length) % slides.length;
+    byId('hero-track').style.transform = 'translateX(' + (-100 * heroIndex) + '%)';
+    slides.forEach(function (slide, i) {
+      slide.setAttribute('aria-label', (i + 1) + ' de ' + slides.length);
+      slide.inert = i !== heroIndex;
+    });
+    byId('hero-dots').querySelectorAll('button').forEach(function (dot, i) {
+      dot.setAttribute('aria-pressed', String(i === heroIndex));
+    });
+  }
+
+  var heroKey = '';
+  function renderHero() {
+    var available = 0;
+    document.querySelectorAll('.hero__slide').forEach(function (slide) {
+      var pack = products.find(function (p) { return p.id === slide.dataset.pack; });
+      // Before the catalog loads, keep the first banner only.
+      slide.hidden = state.loaded ? !pack : slide !== document.querySelector('.hero__slide');
+      slide.querySelector('[data-pack-add]').disabled = !pack;
+      if (!slide.hidden) available += 1;
+    });
+    byId('promo').hidden = hasActiveFilters() || available === 0;
+    var key = heroSlides().map(function (slide) { return slide.dataset.pack; }).join('|');
+    if (key === heroKey) return;
+    heroKey = key;
+    var slides = heroSlides();
+    var dots = byId('hero-dots');
+    dots.hidden = slides.length < 2;
+    fill(dots, slides.map(function (slide, i) {
+      var dot = button('hero__dot', undefined, function () { showSlide(i); });
+      dot.setAttribute('aria-label', 'Promoción ' + (i + 1));
+      return dot;
+    }));
+    showSlide(0);
+  }
+
   function pickGroup(name) {
     setState({ group: name, cat: 'Todo' });
     byId('catalogo').scrollIntoView();
@@ -561,16 +606,14 @@
     fill(byId('grid'), list.map(productCard));
     renderGroups();
     renderNav();
-    byId('catalog-title').textContent = state.group || 'Nuestro catálogo';
+    var title = byId('catalog-title');
+    if (state.group) title.textContent = state.group;
+    else fill(title, [document.createTextNode('Nuestro '), el('span', undefined, 'catálogo')]);
     byId('show-all').hidden = !state.group;
-    var pack = products.find(function (p) { return p.id === PACK_ID; });
-    // Before the catalog loads, keep the banner; once loaded, it needs the pack on sale.
-    byId('promo').hidden = hasActiveFilters() || (state.loaded && !pack);
+    renderHero();
     byId('count').textContent = products.length ? list.length + (list.length === 1 ? ' producto' : ' productos') : '';
     byId('empty').hidden = state.loadError || !state.loaded || list.length !== 0;
     byId('load-error').hidden = !state.loadError;
-
-    byId('hero-add').disabled = !pack;
 
     var favCount = Object.keys(state.favs).length;
     var favBadge = byId('fav-badge');
@@ -765,10 +808,22 @@
       openCart();
     });
     byId('cart-close').addEventListener('click', function () { byId('cart').close(); });
-    byId('hero-add').addEventListener('click', function () {
-      var pack = products.find(function (p) { return p.id === PACK_ID; });
-      if (pack && pack.inStock) addToCart(pack);
+    document.querySelectorAll('[data-pack-add]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var pack = products.find(function (p) { return p.id === button.dataset.packAdd; });
+        if (pack && pack.inStock) addToCart(pack);
+      });
     });
+    var hero = byId('promo');
+    hero.addEventListener('mouseenter', function () { heroPaused = true; });
+    hero.addEventListener('mouseleave', function () { heroPaused = false; });
+    hero.addEventListener('focusin', function () { heroPaused = true; });
+    hero.addEventListener('focusout', function () { heroPaused = false; });
+    setInterval(function () {
+      var slides = heroSlides();
+      if (heroPaused || document.hidden || slides.length < 2 || hero.hidden) return;
+      showSlide(heroIndex + 1);
+    }, 6000);
     byId('checkout').addEventListener('submit', submitOrder);
     byId('cart-continue').addEventListener('click', function () {
       setState({ cartStep: 'details' });

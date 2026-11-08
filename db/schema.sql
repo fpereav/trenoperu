@@ -191,3 +191,17 @@ WHERE p.id = n.id AND p.description = n.old_description
   AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'instagram_descriptions');
 
 INSERT INTO data_migrations (name) VALUES ('instagram_descriptions') ON CONFLICT (name) DO NOTHING;
+
+-- One-time load of the vest and kettlebell pack shown in the second banner.
+UPDATE products SET sort_order = sort_order + 1
+WHERE sort_order >= 3
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_kettlebell_pack');
+
+INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, top, sort_order)
+SELECT 'PACKPE', 'Pack chaleco 10 kg + pesa rusa 4 kg',
+  'Pack con chaleco lastrado de 10 kg y pesa rusa de PVC de 4 kg para entrenar fuerza y resistencia donde quieras. Más resistencia, más intensidad y más opciones para entrenar.',
+  'Packs', 8900, 'pack-chaleco-pesa.jpg', '["negro"]'::jsonb, 2, false, 3
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_kettlebell_pack')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO data_migrations (name) VALUES ('vest_kettlebell_pack') ON CONFLICT (name) DO NOTHING;

@@ -15,7 +15,7 @@
 <meta property="og:image" content="https://trenoperu.vercel.app/assets/img/banner-pack.jpg">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Store","name":"TRENO Perú","url":"https://trenoperu.vercel.app/","logo":"https://trenoperu.vercel.app/assets/img/logo-treno.png","image":"https://trenoperu.vercel.app/assets/img/banner-pack.jpg","telephone":"+51957503022","priceRange":"S/","areaServed":"PE","sameAs":["https://www.instagram.com/treno_peru"]}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="assets/img/favicon.png">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -48,15 +48,27 @@
   </header>
 
   <main>
-    <section id="promo" class="hero">
-      <h1 class="visually-hidden">TRENO Perú: pack chaleco lastrado de 10 kg y tobilleras de 1 kg a S/ 69</h1>
-      <div class="hero__banner">
-        <img src="assets/img/banner-pack.jpg" width="2000" height="668" alt="Pack completo, entrena con más: chaleco lastrado de 10 kg y tobilleras de 1 kg a S/ 69, con 30% de descuento.">
-        <div class="hero__actions">
-          <button id="hero-add" class="hero__action hero__action--cart" type="button" disabled>Agregar al carrito</button>
-          <a class="hero__action hero__action--whatsapp" href="https://wa.me/51957503022?text=M%C3%81S">Escríbenos “MÁS” por WhatsApp</a>
+    <section id="promo" class="hero" aria-roledescription="carrusel" aria-label="Promociones">
+      <h1 class="visually-hidden">TRENO Perú: packs de chaleco lastrado con tobilleras o pesa rusa</h1>
+      <div class="hero__viewport">
+        <div id="hero-track" class="hero__track" aria-live="off">
+          <div class="hero__banner hero__slide" data-pack="PACKCH" role="group" aria-roledescription="diapositiva">
+            <img src="assets/img/banner-pack.jpg" width="2000" height="668" alt="Pack completo, entrena con más: chaleco lastrado de 10 kg y tobilleras de 1 kg a S/ 69, con 30% de descuento.">
+            <div class="hero__actions">
+              <button class="hero__action hero__action--cart" type="button" data-pack-add="PACKCH" disabled>Agregar al carrito</button>
+              <a class="hero__action hero__action--whatsapp" href="https://wa.me/51957503022?text=M%C3%81S" target="_blank" rel="noopener">Escríbenos “MÁS” por WhatsApp</a>
+            </div>
+          </div>
+          <div class="hero__banner hero__slide" data-pack="PACKPE" role="group" aria-roledescription="diapositiva">
+            <img src="assets/img/banner-pack-pesa.jpg" width="2000" height="668" alt="Pack completo, entrena con más: chaleco lastrado de 10 kg y pesa rusa de 4 kg a S/ 89. Paga fácil con Yape." loading="lazy">
+            <div class="hero__actions">
+              <button class="hero__action hero__action--cart" type="button" data-pack-add="PACKPE" disabled>Agregar al carrito</button>
+              <a class="hero__action hero__action--whatsapp" href="https://wa.me/51957503022?text=Hola%2C%20quiero%20el%20pack%20chaleco%2010%20kg%20%2B%20pesa%20rusa%204%20kg" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
+            </div>
+          </div>
         </div>
       </div>
+      <div id="hero-dots" class="hero__dots" role="group" aria-label="Elegir promoción"></div>
     </section>
 
     <ul class="benefits wrap">
@@ -66,12 +78,12 @@
     </ul>
 
     <section id="groups" class="groups wrap" aria-labelledby="groups-title">
-      <h2 id="groups-title" class="section-title">Elige tu equipo</h2>
+      <h2 id="groups-title" class="section-title">Elige tu <span>equipo</span></h2>
       <div id="groups-grid" class="groups__grid"></div>
     </section>
 
     <section id="catalogo" class="catalog wrap" aria-labelledby="catalog-title">
-      <h2 id="catalog-title" class="section-title">Nuestro catálogo</h2>
+      <h2 id="catalog-title" class="section-title">Nuestro <span>catálogo</span></h2>
       <p class="catalog__back"><button id="show-all" class="link-button" type="button" hidden>← Ver todo el catálogo</button></p>
       <p class="catalog__intro">Pesas, mats, bandas y accesorios para entrenar en casa, en el parque o donde quieras.</p>
 
@@ -135,7 +147,10 @@
     </section>
 
     <section class="social wrap">
-      <h2 class="section-title">Únete a la comunidad TRENO</h2>
+      <h2 class="section-title">Únete a la comunidad <span>TRENO</span></h2>
+      <div class="social__video">
+        <iframe src="https://www.instagram.com/reel/C2eEB_8sgH4/embed/" title="Video de Instagram de TRENO: chalecos con peso de 10, 15 y 20 kg" loading="lazy" allowfullscreen></iframe>
+      </div>
       <p class="social__link"><a class="button button--outline" href="https://www.instagram.com/treno_peru">Ver @treno_peru</a></p>
     </section>
   </main>

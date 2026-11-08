@@ -38,7 +38,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   line-height: 1;
   text-transform: uppercase;
 }
-.section-title { font-size: 36px; letter-spacing: 0.01em; text-align: center; }
+.section-title { font-size: clamp(32px, 4vw, 48px); font-style: italic; letter-spacing: 0.01em; text-align: center; }
+.section-title span { color: var(--accent); }
+.section-title::after { content: ''; display: block; width: 64px; height: 5px; margin: 14px auto 0; border-radius: 2px; background: var(--accent); transform: skewX(-24deg); }
+.about__intro .display { font-style: italic; }
 
 .button {
   display: inline-flex;
@@ -102,7 +105,15 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Hero */
 .hero { background: #000000; }
-.hero__banner { position: relative; max-width: 2000px; margin-inline: auto; }
+.hero { position: relative; }
+.hero__viewport { max-width: 2000px; margin-inline: auto; overflow: hidden; }
+.hero__track { display: flex; transition: transform 0.7s ease; }
+.hero__banner { position: relative; flex: 0 0 100%; min-width: 0; }
+.hero__dots { position: absolute; left: 50%; bottom: 12px; display: flex; gap: 8px; transform: translateX(-50%); }
+.hero__dot { position: relative; width: 12px; height: 12px; padding: 0; border: 2px solid #ffffff; border-radius: 50%; background: transparent; cursor: pointer; }
+.hero__dot[aria-pressed="true"] { background: #ffffff; }
+.hero__dot::before { content: ''; position: absolute; inset: -16px; }
+@media (prefers-reduced-motion: reduce) { .hero__track { transition: none; } }
 .hero__banner img { display: block; width: 100%; height: auto; }
 /* The banner image draws these two buttons; these areas sit exactly over them. */
 .hero__action { position: absolute; display: block; padding: 0; border: 0; border-radius: 40px; background: transparent; color: transparent; font-size: 0; cursor: pointer; }
@@ -199,6 +210,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Instagram */
 .social { padding-block: 32px 64px; }
 .social__link { margin: 24px 0 0; text-align: center; }
+.social__video { max-width: 400px; margin: 32px auto 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
+.social__video iframe { display: block; width: 100%; height: 640px; border: 0; }
 
 /* WhatsApp help */
 .wa { position: fixed; right: 20px; bottom: 20px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
@@ -296,6 +309,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .hero__action--cart { background: var(--accent); }
   .hero__action--cart:disabled { background: var(--line); color: var(--muted); }
   .hero__action--whatsapp { border: 1px solid #ffffff; color: #ffffff; }
+  .hero__dots { position: static; justify-content: center; padding-bottom: 16px; transform: none; }
   .filters__panel { grid-template-columns: minmax(0, 1fr); }
   .about__panel { grid-template-columns: minmax(0, 1fr); padding: 32px 24px; }
   .product__layout { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
