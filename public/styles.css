@@ -243,10 +243,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .wa__close { width: 44px; height: 44px; border: 0; background: transparent; color: #ffffff; font-size: 24px; line-height: 1; cursor: pointer; }
 .wa__list { flex: 1 1 auto; min-height: 0; padding: 4px 16px; overflow-y: auto; }
 .wa__item + .wa__item { border-top: 1px solid var(--line); }
-.wa__rules { margin: 10px 0 6px; padding: 10px 12px; border-radius: 8px; background: #EAF6EF; font-size: 13px; }
-.wa__rules-title { margin: 0 0 6px; font-weight: 700; }
-.wa__rules ul { margin: 0; padding-left: 18px; }
-.wa__rules li + li { margin-top: 4px; }
+.wa__rules { margin: 10px 0 8px; padding: 12px; border: 1px solid #CDE8D7; border-radius: 10px; background: #F1FAF4; font-size: 13px; }
+.wa__rules-title { margin: 0 0 8px; font-weight: 700; font-size: 14px; }
+.wa__rules-group { margin: 8px 0 4px; color: #2E7D4F; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.wa__rules-list { margin: 0; border-radius: 8px; background: #ffffff; }
+.wa__rules-list > div { display: grid; grid-template-columns: 74px 1fr; gap: 8px; padding: 7px 10px; }
+.wa__rules-list > div + div { border-top: 1px solid #E6F2EA; }
+.wa__rules-list dt { font-weight: 700; }
+.wa__rules-list dd { margin: 0; color: #444444; line-height: 1.35; }
 .wa__item summary { padding-block: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .wa__item p { margin: 0 0 12px; color: #444444; font-size: 14px; }
 .wa__chat { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin: 10px 16px 16px; border-radius: 6px; background: #128C4A; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; }
