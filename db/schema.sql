@@ -286,3 +286,12 @@ UPDATE products SET colors = '["rosado"]'::jsonb
 WHERE id = 'MATGOM' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'mat_pink_only');
 
 INSERT INTO data_migrations (name) VALUES ('mat_pink_only') ON CONFLICT (name) DO NOTHING;
+
+-- One-time competitive prices for the latex band sets and the TRX.
+UPDATE products SET price_cents = 3500
+WHERE id IN ('BANLAT', 'BANROS') AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'bands_trx_prices');
+
+UPDATE products SET price_cents = 9900
+WHERE id = 'TRXSIN' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'bands_trx_prices');
+
+INSERT INTO data_migrations (name) VALUES ('bands_trx_prices') ON CONFLICT (name) DO NOTHING;
