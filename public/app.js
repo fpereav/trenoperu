@@ -506,6 +506,65 @@
     });
   }
 
+  // Drag with the mouse or swipe with a finger to change banners. Trackpads scroll sideways.
+  function bindHeroSwipe() {
+    var viewport = document.querySelector('.hero__viewport');
+    var track = byId('hero-track');
+    var startX = 0, startY = 0, dx = 0, dragging = false, moved = false, pointerId = null;
+
+    function moveTo(offset) {
+      track.style.transform = 'translateX(calc(' + (-100 * heroIndex) + '% + ' + offset + 'px))';
+    }
+
+    viewport.addEventListener('pointerdown', function (event) {
+      if (heroSlides().length < 2 || (event.pointerType === 'mouse' && event.button !== 0)) return;
+      dragging = true; moved = false; dx = 0; pointerId = event.pointerId;
+      startX = event.clientX; startY = event.clientY;
+    });
+    viewport.addEventListener('pointermove', function (event) {
+      if (!dragging || event.pointerId !== pointerId) return;
+      dx = event.clientX - startX;
+      var dy = event.clientY - startY;
+      if (!moved) {
+        // A mostly vertical move is a page scroll, not a banner swipe.
+        if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) { dragging = false; return; }
+        if (Math.abs(dx) < 8) return;
+        moved = true;
+        track.classList.add('is-dragging');
+        viewport.setPointerCapture(pointerId);
+      }
+      event.preventDefault();
+      moveTo(dx);
+      heroChangedAt = Date.now();
+    });
+    function finish() {
+      if (!dragging) return;
+      dragging = false;
+      track.classList.remove('is-dragging');
+      if (!moved) return;
+      var threshold = Math.min(80, viewport.clientWidth * 0.15);
+      if (dx < -threshold) showSlide(heroIndex + 1);
+      else if (dx > threshold) showSlide(heroIndex - 1);
+      else showSlide(heroIndex);
+    }
+    viewport.addEventListener('pointerup', finish);
+    viewport.addEventListener('pointercancel', finish);
+    // After a drag, the release must not open a link or press a button.
+    viewport.addEventListener('click', function (event) {
+      if (moved) { event.preventDefault(); event.stopPropagation(); moved = false; }
+    }, true);
+    viewport.addEventListener('dragstart', function (event) { event.preventDefault(); });
+
+    var wheelLock = 0;
+    viewport.addEventListener('wheel', function (event) {
+      if (heroSlides().length < 2 || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+      event.preventDefault();
+      if (Date.now() < wheelLock || Math.abs(event.deltaX) < 20) return;
+      wheelLock = Date.now() + 700;
+      showSlide(heroIndex + (event.deltaX > 0 ? 1 : -1));
+    }, { passive: false });
+  }
+
   var heroKey = '';
   function renderHero() {
     var available = 0;
@@ -820,6 +879,7 @@
     // Pause only while a keyboard user is on a banner button, so it can be read and used.
     hero.addEventListener('focusin', function (event) { heroPaused = event.target.matches(':focus-visible'); });
     hero.addEventListener('focusout', function () { heroPaused = false; });
+    bindHeroSwipe();
     setInterval(function () {
       var slides = heroSlides();
       if (heroPaused || document.hidden || slides.length < 2 || hero.hidden) return;

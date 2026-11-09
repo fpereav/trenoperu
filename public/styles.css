@@ -109,7 +109,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero { background: #000000; }
 .hero { position: relative; }
 .hero__viewport { max-width: 2000px; margin-inline: auto; overflow: hidden; }
+.hero__viewport { touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.hero__viewport:active { cursor: grabbing; }
+.hero__viewport img { -webkit-user-drag: none; }
 .hero__track { display: flex; transition: transform 0.7s ease; }
+.hero__track.is-dragging { transition: none; }
 .hero__banner { position: relative; flex: 0 0 100%; min-width: 0; }
 .hero__dots { position: absolute; left: 50%; bottom: 12px; display: flex; gap: 8px; transform: translateX(-50%); }
 .hero__dot { position: relative; width: 12px; height: 12px; padding: 0; border: 2px solid #ffffff; border-radius: 50%; background: transparent; cursor: pointer; }
