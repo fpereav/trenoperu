@@ -322,3 +322,22 @@ WHERE v.product_id = n.product_id AND v.label = n.label
   AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'market_prices_nov');
 
 INSERT INTO data_migrations (name) VALUES ('market_prices_nov') ON CONFLICT (name) DO NOTHING;
+
+-- WhatsApp bot: recent customer chats (kept 7 days) and chats handed to a person.
+CREATE TABLE IF NOT EXISTS wa_messages (
+  id         bigserial PRIMARY KEY,
+  phone      text NOT NULL,
+  role       text NOT NULL,
+  body       text NOT NULL,
+  wa_id      text UNIQUE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS wa_messages_phone_idx ON wa_messages (phone, created_at);
+CREATE INDEX IF NOT EXISTS wa_messages_role_idx ON wa_messages (role, created_at);
+
+CREATE TABLE IF NOT EXISTS wa_handoffs (
+  phone  text PRIMARY KEY,
+  until  timestamptz NOT NULL,
+  reason text NOT NULL DEFAULT ''
+);

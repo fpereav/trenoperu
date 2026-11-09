@@ -14,7 +14,7 @@ import traceback
 import unicodedata
 import zipfile
 from http.server import BaseHTTPRequestHandler
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 import pg8000.native
 
@@ -1368,12 +1368,49 @@ class handler(BaseHTTPRequestHandler):
         if not session_is_valid(token):
             raise ApiError(401, "Inicia sesión.")
 
+    def send_plain(self, status, text):
+        data = text.encode()
+        self.send_response(status)
+        self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def whatsapp(self, method):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import whatsapp_bot
+
+        if method == "GET":
+            challenge = whatsapp_bot.verify_subscription(parse_qs(urlsplit(self.path).query))
+            if challenge is None:
+                return self.send_plain(403, "forbidden")
+            return self.send_plain(200, challenge)
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            raise ApiError(400, "Solicitud no válida.")
+        if not 0 < length <= whatsapp_bot.MAX_WEBHOOK_BYTES:
+            raise ApiError(413, "Solicitud no válida.")
+        raw = self.rfile.read(length)
+        if not whatsapp_bot.signature_ok(raw, self.headers.get("X-Hub-Signature-256", "")):
+            raise ApiError(401, "Firma no válida.")
+        try:
+            payload = json.loads(raw)
+        except ValueError:
+            raise ApiError(400, "Solicitud no válida.")
+        if isinstance(payload, dict):
+            whatsapp_bot.handle_webhook(payload, connect, list_products)
+        return self.send_json(200, {"ok": True})
+
     def route(self):
         method = self.command
         path = urlsplit(self.path).path.rstrip("/")
 
         if method == "GET" and path == "/api/products":
             return self.send_json(200, list_products())
+        if path == "/api/whatsapp" and method in ("GET", "POST"):
+            return self.whatsapp(method)
         if method == "GET" and path == "/sitemap.xml":
             return self.send_text(200, "application/xml", sitemap())
         page = re.fullmatch(r"/producto/([A-Z0-9]{1,20})", path)
