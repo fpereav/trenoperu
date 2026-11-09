@@ -936,6 +936,12 @@
     });
     byId('cart-keep-shopping').addEventListener('click', function () { byId('cart').close(); });
     window.addEventListener('hashchange', syncDetailWithHash);
+    document.querySelectorAll('[data-ig-scroll]').forEach(function (nav) {
+      nav.addEventListener('click', function () {
+        var strip = byId('ig-strip');
+        strip.scrollBy({ left: Number(nav.dataset.igScroll) * strip.clientWidth, behavior: 'smooth' });
+      });
+    });
     // Links are real pages for search engines; here they open the product in place.
     byId('grid').addEventListener('click', function (event) {
       if (event.target.closest('button')) return;
