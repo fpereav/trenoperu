@@ -301,3 +301,24 @@ UPDATE products SET colors = '["multicolor"]'::jsonb
 WHERE id IN ('TUBRES', 'BANLAT') AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'band_sets_multicolor');
 
 INSERT INTO data_migrations (name) VALUES ('band_sets_multicolor') ON CONFLICT (name) DO NOTHING;
+
+-- One-time market price review of single products, packs unchanged.
+UPDATE products p SET price_cents = n.price, discount_cents = 0
+FROM (VALUES
+  ('MANVIN', 3500), ('MATGOM', 4900), ('TOBPLA', 3900), ('SOGPVC', 2900),
+  ('CHASIN', 9900), ('MANCAU', 3900), ('STEPVC', 8900), ('GUAPLA', 9900),
+  ('KETPVC', 2900), ('PESHIE', 7500)
+) AS n (id, price)
+WHERE p.id = n.id AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'market_prices_nov');
+
+UPDATE product_variants v SET price_cents = n.price, discount_cents = 0
+FROM (VALUES
+  ('KETPVC', '2 kg', 2900), ('KETPVC', '4 kg', 3900), ('KETPVC', '5 kg', 4500), ('KETPVC', '6 kg', 5500),
+  ('KETPVC', '8 kg', 7500), ('KETPVC', '10 kg', 8900), ('KETPVC', '12 kg', 10900),
+  ('PESHIE', '8 kg', 7500), ('PESHIE', '10 kg', 8900), ('PESHIE', '12 kg', 10900), ('PESHIE', '14 kg', 12500),
+  ('PESHIE', '16 kg', 14500), ('PESHIE', '20 kg', 17500)
+) AS n (product_id, label, price)
+WHERE v.product_id = n.product_id AND v.label = n.label
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'market_prices_nov');
+
+INSERT INTO data_migrations (name) VALUES ('market_prices_nov') ON CONFLICT (name) DO NOTHING;

@@ -40,7 +40,7 @@ window.TRENO_EXTRA_IMAGES = {
   MATGOM: [{ file: 'mat-goma-eva-2.jpg', color: 'rosado' }],
   BANLAT: [{ file: 'bandas-latex-2.jpg' }, { file: 'bandas-latex-3.jpg' }],
   MANCAU: [{ file: 'mancuerna-hexagonal-2.jpg' }],
-  SOGPVC: [{ file: 'soga-pvc-naranja-2.jpg', color: 'naranja' }],
+  SOGPVC: [{ file: 'soga-pvc-2.jpg', color: 'celeste' }, { file: 'soga-pvc-naranja-2.jpg', color: 'naranja' }],
   RUEABD: [2, 3, 4].map(n => ({ file: `rueda-abdominal-ancha-${n}.jpg` })),
   TUBRES: [2, 3, 4, 5, 6, 7].map(n => ({ file: `tubos-resistencia-set-${n}.jpg` }))
 };
