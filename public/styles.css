@@ -90,11 +90,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .site-header__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; min-height: 80px; padding-block: 12px; }
 .logo { display: block; flex: none; line-height: 0; }
 .logo img { display: block; width: auto; height: 44px; }
-.site-nav { display: flex; gap: 24px; min-width: 0; overflow-x: auto; scrollbar-width: none; font-size: 14px; font-weight: 700; text-transform: uppercase; }
+.site-nav { order: 3; flex-basis: 100%; display: flex; gap: 10px; min-width: 0; padding: 8px 40px 12px 4px; overflow-x: auto; scrollbar-width: none; font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
 .site-nav::-webkit-scrollbar { display: none; }
-.site-nav a { flex: none; padding-block: 12px; text-decoration: none; }
+.site-nav a { flex: none; padding: 8px 16px; border-radius: 999px; background: #ffffff; text-decoration: none; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.08); transition: background-color 0.2s, box-shadow 0.2s, color 0.2s, transform 0.2s; }
+.site-nav a:hover { color: var(--ink); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18); transform: translateY(-1px); }
+.site-nav a:first-child { color: var(--accent-text); }
 .site-nav__groups { display: contents; }
-.site-nav a[aria-current] { color: var(--accent-text); }
+.site-nav a[aria-current] { background: var(--accent); color: var(--ink); box-shadow: 0 3px 12px rgba(255, 70, 112, 0.45); }
 .site-header__tools { display: flex; flex: 1 1 260px; align-items: center; justify-content: flex-end; gap: 4px; }
 .search { display: flex; flex: 0 1 240px; align-items: center; gap: 8px; min-width: 0; height: 44px; padding: 0 14px; margin-right: 8px; border-radius: 4px; background: var(--soft); }
 .search input { width: 100%; min-width: 0; border: 0; background: transparent; font-size: 14px; outline: none; }
