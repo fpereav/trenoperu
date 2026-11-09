@@ -234,3 +234,23 @@ WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pink_bands')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO data_migrations (name) VALUES ('pink_bands') ON CONFLICT (name) DO NOTHING;
+
+-- One-time load of two ab wheels and a resistance tube set.
+INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, top, sort_order)
+SELECT n.id, n.name, n.description, n.category, n.price, n.image, n.colors::jsonb, 5, false,
+  COALESCE((SELECT MAX(sort_order) FROM products), 0) + n.pos
+FROM (VALUES
+  ('RUEABD', 'Rueda abdominal retráctil + mat',
+   'Rueda abdominal con resorte interno que te ayuda a regresar y suma resistencia en cada repetición. Rueda ancha de goma para más estabilidad, barra de hierro con empuñaduras antideslizantes y mat para apoyar las rodillas. Soporta hasta 110 kg.',
+   'Funcional', 4500, 'rueda-abdominal-retractil.jpg', '["negro"]', 1),
+  ('ABCARV', 'Rueda abdominal Ab Carver roja + rodillera',
+   'Rueda extra ancha con banda de goma antideslizante que permite ir al centro y a los lados para trabajar abdomen y oblicuos. Mangos ergonómicos para activar brazos y core, y almohadilla de espuma para las rodillas.',
+   'Funcional', 3900, 'rueda-abdominal-carver-rojo.jpg', '["rojo"]', 2),
+  ('TUBRES', 'Set de tubos de resistencia x11 piezas',
+   'Set de 11 piezas: 5 tubos de látex con distinta resistencia (amarillo, rojo, verde, azul y negro), 2 manijas acolchadas, 2 tobilleras, anclaje de puerta y bolsa de transporte. Úsalos solos o combinados para entrenar todo el cuerpo en casa.',
+   'Resistencia', 4900, 'tubos-resistencia-11.jpg', '["amarillo","rojo","verde","azul","negro"]', 3)
+) AS n (id, name, description, category, price, image, colors, pos)
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'ab_wheels_tubes')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO data_migrations (name) VALUES ('ab_wheels_tubes') ON CONFLICT (name) DO NOTHING;
