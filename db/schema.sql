@@ -242,15 +242,35 @@ SELECT n.id, n.name, n.description, n.category, n.price, n.image, n.colors::json
 FROM (VALUES
   ('RUEABD', 'Rueda abdominal retráctil + mat',
    'Rueda abdominal con resorte interno que te ayuda a regresar y suma resistencia en cada repetición. Rueda ancha de goma para más estabilidad, barra de hierro con empuñaduras antideslizantes y mat para apoyar las rodillas. Soporta hasta 110 kg.',
-   'Funcional', 4500, 'rueda-abdominal-retractil.jpg', '["negro"]', 1),
+   'Funcional', 4500, 'rueda-abdominal-ancha.jpg', '["negro"]', 1),
   ('ABCARV', 'Rueda abdominal Ab Carver roja + rodillera',
    'Rueda extra ancha con banda de goma antideslizante que permite ir al centro y a los lados para trabajar abdomen y oblicuos. Mangos ergonómicos para activar brazos y core, y almohadilla de espuma para las rodillas.',
-   'Funcional', 3900, 'rueda-abdominal-carver-rojo.jpg', '["rojo"]', 2),
+   'Funcional', 3900, 'ab-carver-pro.jpg', '["rojo"]', 2),
   ('TUBRES', 'Set de tubos de resistencia x11 piezas',
    'Set de 11 piezas: 5 tubos de látex con distinta resistencia (amarillo, rojo, verde, azul y negro), 2 manijas acolchadas, 2 tobilleras, anclaje de puerta y bolsa de transporte. Úsalos solos o combinados para entrenar todo el cuerpo en casa.',
-   'Resistencia', 4900, 'tubos-resistencia-11.jpg', '["amarillo","rojo","verde","azul","negro"]', 3)
+   'Resistencia', 4900, 'tubos-resistencia-set.jpg', '["amarillo","rojo","verde","azul","negro"]', 3)
 ) AS n (id, name, description, category, price, image, colors, pos)
 WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'ab_wheels_tubes')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO data_migrations (name) VALUES ('ab_wheels_tubes') ON CONFLICT (name) DO NOTHING;
+
+-- One-time switch of the ab wheels and tube set to the owner's product photos.
+UPDATE products SET
+  name = 'Rueda abdominal ancha + mat',
+  description = 'Rueda extra ancha de goma con banda roja antideslizante, mangos ergonómicos desmontables con agarre texturizado y mat de espuma para apoyar las rodillas. Gira estable para trabajar abdomen y oblicuos al centro y a los lados.',
+  image = 'rueda-abdominal-ancha.jpg', colors = '["negro"]'::jsonb
+WHERE id = 'RUEABD' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'owner_photos_wheels_tubes');
+
+UPDATE products SET
+  name = 'Rueda abdominal Carver Pro',
+  description = 'Rueda abdominal de rodamiento ancho con resorte interno que te ayuda a regresar y suma resistencia en cada repetición. Mangos curvos antideslizantes que activan brazos, hombros y core. Color gris con guinda.',
+  image = 'ab-carver-pro.jpg', colors = '["plomo"]'::jsonb
+WHERE id = 'ABCARV' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'owner_photos_wheels_tubes');
+
+UPDATE products SET
+  description = 'Set de 11 piezas: 5 tubos de látex con 5 niveles de resistencia (azul 4.5 kg, amarillo 6.8 kg, negro 9.1 kg, verde 11.3 kg y rojo 13.6 kg), 2 manijas acolchadas, 2 tobilleras, anclaje de puerta y bolsa de transporte. Úsalos solos o combinados para entrenar todo el cuerpo en casa.',
+  image = 'tubos-resistencia-set.jpg'
+WHERE id = 'TUBRES' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'owner_photos_wheels_tubes');
+
+INSERT INTO data_migrations (name) VALUES ('owner_photos_wheels_tubes') ON CONFLICT (name) DO NOTHING;
