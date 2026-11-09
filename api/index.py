@@ -1229,7 +1229,7 @@ def product_page(product_id):
 <a href="/">Ver todo el catálogo</a>
 </div>
 </article></main>
-<footer class="site-footer"><div class="wrap site-footer__row"><a class="logo" href="/"><img src="/assets/img/logo-treno-blanco.png" alt="TRENO" width="404" height="144"></a><div class="site-footer__links"><a href="tel:+51957503022">Pedidos: 957 503 022</a><a href="https://www.instagram.com/treno_peru">Instagram: @treno_peru</a></div></div></footer>
+<footer class="site-footer"><div class="wrap site-footer__row"><a class="logo" href="/"><img src="/assets/img/logo-treno-blanco.png" alt="TRENO" width="404" height="144"></a><div class="site-footer__links"><a href="tel:+51957503022">Pedidos: 957 503 022</a><a href="https://www.instagram.com/treno_peru">Instagram: @treno_peru</a><a href="https://www.facebook.com/treno.peru">Facebook: TRENO Perú</a></div></div></footer>
 </body>
 </html>
 """

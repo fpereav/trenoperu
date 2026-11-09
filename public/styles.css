@@ -218,7 +218,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* Instagram */
 .social { padding-block: 32px 64px; }
-.social__link { margin: 24px 0 0; text-align: center; }
+.social__link { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 24px 0 0; }
 .social__video { max-width: 400px; margin: 32px auto 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #ffffff; }
 .social__video iframe { display: block; width: 100%; height: 640px; border: 0; }
 
