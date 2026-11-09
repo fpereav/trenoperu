@@ -322,9 +322,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .checkout { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
 .checkout__total { display: flex; justify-content: space-between; font-size: 16px; font-weight: 700; }
 .checkout__note { margin: 0; color: #444444; font-size: 13px; }
-.ship-note { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #F3C9D4; border-radius: 8px; background: #FFF4F7; font-size: 13px; }
-.ship-note p { margin: 0; color: #333333; }
-.ship-note__link { align-self: flex-start; min-height: 40px; border-radius: 8px; }
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
 .field input, .field textarea { min-height: 44px; padding: 10px 12px; border: 1px solid var(--control); border-radius: 4px; font-size: 14px; font-weight: 400; }
 .field textarea { resize: vertical; }
