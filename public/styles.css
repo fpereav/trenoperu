@@ -200,6 +200,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .card .button { width: 100%; margin-top: auto; border-radius: 8px; }
 .card .button--outline:hover { border-color: var(--accent); background: var(--accent); color: var(--ink); }
 
+/* How to buy */
+.rules { padding-block: 32px; scroll-margin-top: 16px; }
+.rules__key { max-width: 720px; margin: 20px auto 0; padding: 12px 16px; border-left: 4px solid var(--accent); border-radius: 6px; background: #FFF4F7; font-size: 15px; text-align: center; }
+.rules__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 24px 0 0; padding: 0; list-style: none; }
+.rules__item { padding: 20px; border: 1px solid #ECECEE; border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+.rules__item svg { color: var(--accent-text); }
+.rules__item h3 { margin: 10px 0 6px; font-family: var(--display); font-size: 20px; font-weight: 800; text-transform: uppercase; }
+.rules__item p { margin: 0; color: #444444; font-size: 14px; }
+@media (max-width: 1100px) { .rules__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .rules__grid { grid-template-columns: minmax(0, 1fr); } .rules__key { text-align: left; } }
+
 /* About */
 .about { padding-block: 32px; scroll-margin-top: 16px; }
 .about__panel { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 32px 48px; padding: 48px; border-radius: 8px; background: linear-gradient(120deg, #000000 0%, #17171A 60%, #3A0B1B 100%); color: #ffffff; }
@@ -232,6 +243,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .wa__close { width: 44px; height: 44px; border: 0; background: transparent; color: #ffffff; font-size: 24px; line-height: 1; cursor: pointer; }
 .wa__list { flex: 1 1 auto; min-height: 0; padding: 4px 16px; overflow-y: auto; }
 .wa__item + .wa__item { border-top: 1px solid var(--line); }
+.wa__rules { margin: 10px 0 6px; padding: 10px 12px; border-radius: 8px; background: #EAF6EF; font-size: 13px; }
+.wa__rules-title { margin: 0 0 6px; font-weight: 700; }
+.wa__rules ul { margin: 0; padding-left: 18px; }
+.wa__rules li + li { margin-top: 4px; }
 .wa__item summary { padding-block: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .wa__item p { margin: 0 0 12px; color: #444444; font-size: 14px; }
 .wa__chat { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; margin: 10px 16px 16px; border-radius: 6px; background: #128C4A; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; }
