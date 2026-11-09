@@ -202,14 +202,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 /* How to buy */
 .rules { padding-block: 32px; scroll-margin-top: 16px; }
-.rules__key { max-width: 720px; margin: 20px auto 0; padding: 12px 16px; border-left: 4px solid var(--accent); border-radius: 6px; background: #FFF4F7; font-size: 15px; text-align: center; }
-.rules__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 24px 0 0; padding: 0; list-style: none; }
-.rules__item { padding: 20px; border: 1px solid #ECECEE; border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
-.rules__item svg { color: var(--accent-text); }
-.rules__item h3 { margin: 10px 0 6px; font-family: var(--display); font-size: 20px; font-weight: 800; text-transform: uppercase; }
-.rules__item p { margin: 0; color: #444444; font-size: 14px; }
-@media (max-width: 1100px) { .rules__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .rules__grid { grid-template-columns: minmax(0, 1fr); } .rules__key { text-align: left; } }
+.rules__intro { margin: 16px auto 0; color: #444444; font-size: 15px; text-align: center; }
+.rules__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; max-width: 960px; margin: 24px auto 0; }
+.rules__panel { overflow: hidden; border: 1px solid #ECECEE; border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+.rules__head { display: flex; align-items: center; gap: 10px; margin: 0; padding: 14px 20px; border-bottom: 3px solid var(--accent); background: #FFF4F7; font-family: var(--display); font-size: 22px; font-weight: 800; text-transform: uppercase; }
+.rules__head svg { color: var(--accent-text); }
+.rules__list { margin: 0; }
+.rules__list > div { display: grid; grid-template-columns: 96px 1fr; gap: 12px; padding: 14px 20px; }
+.rules__list > div + div { border-top: 1px solid #F0F0F2; }
+.rules__list dt { font-weight: 700; }
+.rules__list dd { margin: 0; color: #444444; font-size: 14px; line-height: 1.45; }
+@media (max-width: 760px) { .rules__grid { grid-template-columns: minmax(0, 1fr); } .rules__list > div { grid-template-columns: 80px 1fr; padding: 12px 16px; } .rules__head { padding: 12px 16px; } }
 
 /* About */
 .about { padding-block: 32px; scroll-margin-top: 16px; }
