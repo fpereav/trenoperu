@@ -168,12 +168,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .catalog__back:has(button[hidden]) { display: none; }
 
 /* Product grid */
-.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 40px 16px; }
-.card { cursor: pointer; }
-.card { display: flex; flex-direction: column; min-width: 0; text-align: center; }
-.tile { position: relative; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 4px; background: #ffffff; }
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px 16px; }
+.card { display: flex; flex-direction: column; min-width: 0; padding: 10px 10px 14px; border: 1px solid #ECECEE; border-radius: 12px; background: #ffffff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); text-align: center; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; }
+.card:hover { border-color: #E2E2E6; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1); transform: translateY(-2px); }
+.tile { position: relative; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 8px; background: #F4F4F6; }
 .tile__link { display: block; width: 100%; height: 100%; }
-.tile img { display: block; width: 100%; height: 100%; padding: 4%; object-fit: contain; }
+/* Multiply blends white photo backgrounds into the tile color, so every photo sits on the same background. */
+.tile img { display: block; width: 100%; height: 100%; padding: 6%; object-fit: contain; mix-blend-mode: multiply; transition: transform 0.3s; }
+.card:hover .tile img { transform: scale(1.04); }
 .tile__empty { display: grid; place-items: center; height: 100%; padding: 16px; background: var(--soft); color: var(--muted); font-size: 13px; }
 .tile__note { position: absolute; bottom: 8px; left: 8px; padding: 2px 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.9); color: var(--muted); font-size: 12px; }
 .tile__fav { position: absolute; right: 4px; bottom: 4px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; cursor: pointer; }
@@ -183,15 +185,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tile__badge--out { background: var(--line); }
 .card__name a { text-decoration: none; }
 .card__name a:hover { text-decoration: underline; }
-.card__name { margin: 12px 0 2px; font-size: 14px; font-weight: 500; line-height: 1.35; }
-.card__meta { color: var(--muted); font-size: 13px; }
+.card__name { display: -webkit-box; min-height: 2.7em; margin: 12px 4px 4px; overflow: hidden; font-size: 14px; font-weight: 600; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.card__meta { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 .price-was { color: var(--muted); font-size: 0.8em; font-weight: 500; }
 .price-off { color: var(--accent-text); font-size: 0.8em; font-weight: 700; white-space: nowrap; }
-.card__price { margin-top: 4px; font-size: 16px; font-weight: 700; }
-.swatches { display: flex; flex-wrap: wrap; justify-content: center; gap: 0; margin: 4px 0 8px; }
+.card__price { margin-top: 6px; font-family: var(--display); font-size: 22px; font-weight: 800; line-height: 1.1; }
+.swatches { display: flex; flex-wrap: wrap; justify-content: center; gap: 0; min-height: 24px; margin: 4px 0 10px; }
 .swatch { width: 24px; height: 24px; padding: 0; border: 6px solid transparent; border-radius: 50%; background-clip: padding-box; cursor: pointer; }
 .swatch[aria-pressed="true"] { outline: 1.5px solid var(--ink); outline-offset: -3px; }
-.card .button { width: 100%; margin-top: auto; }
+.card .button { width: 100%; margin-top: auto; border-radius: 8px; }
+.card .button--outline:hover { border-color: var(--accent); background: var(--accent); color: var(--ink); }
 
 /* About */
 .about { padding-block: 32px; scroll-margin-top: 16px; }
@@ -331,7 +334,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .chips::-webkit-scrollbar { display: none; }
   .toolbar__count { display: none; }
   .sort select { max-width: 170px; }
-  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 12px; }
+  .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; }
+  .card { padding: 8px 8px 12px; }
+  .card__name { font-size: 13px; }
+  .card__price { font-size: 20px; }
   .tile__badge { top: 4px; left: 4px; font-size: 11px; padding-inline: 6px; }
   .card .button { padding-inline: 8px; }
 }
