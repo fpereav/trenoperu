@@ -280,3 +280,9 @@ UPDATE products SET price_cents = 4900
 WHERE id = 'ABCARV' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'carver_pro_price');
 
 INSERT INTO data_migrations (name) VALUES ('carver_pro_price') ON CONFLICT (name) DO NOTHING;
+
+-- One-time change: the EVA mat is offered in pink only.
+UPDATE products SET colors = '["rosado"]'::jsonb
+WHERE id = 'MATGOM' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'mat_pink_only');
+
+INSERT INTO data_migrations (name) VALUES ('mat_pink_only') ON CONFLICT (name) DO NOTHING;

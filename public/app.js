@@ -396,11 +396,11 @@
     ['Mancuernas', /mancuerna/],
     ['Chalecos con peso', /chaleco/],
     ['Tobilleras', /tobillera/],
+    ['Funcional', /\btrx\b|rueda abdominal/],
     ['Mats', /\bmats?\b/],
     ['Bandas de resistencia', /\bbandas?\b/],
     ['Sogas para saltar', /\bsogas?\b/],
     ['Steps', /\bsteps?\b/],
-    ['TRX', /\btrx\b/],
     ['Guantes de box', /guantes?/],
     ['Rollers', /\brollers?\b/]
   ];
