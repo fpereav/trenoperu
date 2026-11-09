@@ -828,7 +828,7 @@
       byId('done-order').textContent = '#' + body.order;
       byId('done-total').textContent = money(body.total);
       byId('done-whatsapp').href = 'https://wa.me/51957503022?text=' + encodeURIComponent(
-        'Hola, pagué con Yape mi pedido #' + body.order + ' por ' + money(body.total) + '. Adjunto mi constancia.'
+        'Hola, pagué mi pedido #' + body.order + ' por ' + money(body.total) + '. Adjunto mi constancia.'
       );
       byId('cart-done').hidden = false;
       state.cartStep = 'items';
@@ -840,7 +840,7 @@
       loadProducts();
     }).finally(function () {
       submit.disabled = false;
-      submit.textContent = 'Confirmar y ver QR de Yape';
+      submit.textContent = 'Confirmar y ver QR de pago';
     });
   }
 
