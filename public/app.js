@@ -486,6 +486,7 @@
   // Promo banners that change by themselves. Each one needs its pack on sale.
   var heroIndex = 0;
   var heroPaused = false;
+  var heroChangedAt = Date.now();
   function heroSlides() {
     return Array.prototype.filter.call(document.querySelectorAll('.hero__slide'), function (slide) { return !slide.hidden; });
   }
@@ -494,6 +495,7 @@
     var slides = heroSlides();
     if (!slides.length) return;
     heroIndex = (index + slides.length) % slides.length;
+    heroChangedAt = Date.now();
     byId('hero-track').style.transform = 'translateX(' + (-100 * heroIndex) + '%)';
     slides.forEach(function (slide, i) {
       slide.setAttribute('aria-label', (i + 1) + ' de ' + slides.length);
@@ -815,15 +817,15 @@
       });
     });
     var hero = byId('promo');
-    hero.addEventListener('mouseenter', function () { heroPaused = true; });
-    hero.addEventListener('mouseleave', function () { heroPaused = false; });
-    hero.addEventListener('focusin', function () { heroPaused = true; });
+    // Pause only while a keyboard user is on a banner button, so it can be read and used.
+    hero.addEventListener('focusin', function (event) { heroPaused = event.target.matches(':focus-visible'); });
     hero.addEventListener('focusout', function () { heroPaused = false; });
     setInterval(function () {
       var slides = heroSlides();
       if (heroPaused || document.hidden || slides.length < 2 || hero.hidden) return;
+      if (Date.now() - heroChangedAt < 5500) return;
       showSlide(heroIndex + 1);
-    }, 6000);
+    }, 1000);
     byId('checkout').addEventListener('submit', submitOrder);
     byId('cart-continue').addEventListener('click', function () {
       setState({ cartStep: 'details' });
