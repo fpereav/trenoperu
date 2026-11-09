@@ -15,10 +15,9 @@ Catálogo y pedidos de TRENO: página estática (`public/`), API en Python (`api
 - `WHATSAPP_APP_SECRET`: clave secreta de la app de Meta; con ella se comprueba que los mensajes vienen de Meta.
 - `WHATSAPP_TOKEN`: token de acceso permanente (usuario del sistema) de WhatsApp Cloud API.
 - `WHATSAPP_PHONE_NUMBER_ID`: identificador del número en WhatsApp Manager.
-- `ANTHROPIC_API_KEY`: clave de la API de Claude.
-- Opcionales: `WHATSAPP_BOT_MODEL` (por defecto `claude-opus-5-5`), `WHATSAPP_BOT_DAILY_LIMIT` (respuestas de IA por día, por defecto 400), `WHATSAPP_GRAPH_VERSION`.
+- Opcional: `WHATSAPP_GRAPH_VERSION`.
 
-El bot responde con el catálogo en stock. Pasa el chat a una persona (se calla 12 horas para ese cliente) si el cliente pide un asesor, pregunta por un pedido o un pago, envía una foto o un archivo, escribe más de 20 mensajes en una hora, o si el dueño responde desde la app. Los chats se guardan 7 días.
+El bot no usa IA ni servicios de pago: responde con un menú (1 productos, 2 pagos, 3 delivery, 4 recojo, 5 packs, 6 persona), palabras clave y una búsqueda en el catálogo con stock. Pasa el chat a una persona (se calla 12 horas para ese cliente) si el cliente pide un asesor, pregunta por un pedido o un pago, envía una foto o un archivo, no se le entiende dos veces seguidas, escribe más de 20 mensajes en una hora, o si el dueño responde desde la app. Los chats se guardan 7 días.
 
 ## Desarrollo local
 
