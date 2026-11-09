@@ -219,3 +219,18 @@ WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pink_vest_pack')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO data_migrations (name) VALUES ('pink_vest_pack') ON CONFLICT (name) DO NOTHING;
+
+-- One-time load of the pink and lilac latex band set.
+UPDATE products SET sort_order = sort_order + 1
+WHERE sort_order > (SELECT sort_order FROM products WHERE id = 'BANLAT')
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pink_bands');
+
+INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, top, sort_order)
+SELECT 'BANROS', 'Bandas de látex rosa y lila x5',
+  'Set de 5 bandas de 100 % látex natural en tonos rosa y lila, con 5 intensidades: leve, moderada, regular, fuerte e intensiva. Miden 60 × 5 cm. Ideales para fuerza, pilates, glúteos y piernas.',
+  'Resistencia', 6900, 'bandas-latex-rosado.jpg', '["rosado"]'::jsonb, 5, false,
+  COALESCE((SELECT sort_order + 1 FROM products WHERE id = 'BANLAT'), 99)
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pink_bands')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO data_migrations (name) VALUES ('pink_bands') ON CONFLICT (name) DO NOTHING;
