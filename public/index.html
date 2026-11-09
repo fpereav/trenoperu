@@ -24,7 +24,7 @@
 
   <header class="site-header">
     <div class="wrap site-header__row">
-      <a class="logo" href="#" data-cat-link="Todo"><img src="assets/img/logo-treno.png" alt="TRENO" width="404" height="144"></a>
+      <a class="logo logo--badge" href="#" data-cat-link="Todo"><img src="assets/img/logo-treno-blanco.png" alt="TRENO" width="404" height="144"></a>
       <nav class="site-nav" aria-label="Principal">
         <a href="#conocenos">Conócenos</a>
         <a href="#como-comprar">Cómo comprar</a>
@@ -136,8 +136,8 @@
         <div class="rules__panel">
           <h3 class="rules__head"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Pago</h3>
           <dl class="rules__list">
-            <div><dt>Yape</dt><dd>Compras online y delivery. El QR aparece al confirmar tu pedido.</dd></div>
-            <div><dt>Efectivo</dt><dd>Solo si recoges tu pedido en San Borja.</dd></div>
+            <div><dt>Yape</dt><dd>Para pedidos con delivery. Al confirmar tu pedido en la web te mostramos el QR para yapear.</dd></div>
+            <div><dt>Efectivo</dt><dd>Pagas al recoger tu pedido en San Borja.</dd></div>
           </dl>
         </div>
         <div class="rules__panel">
@@ -210,8 +210,8 @@
           <p class="wa__rules-title">Antes de escribirnos</p>
           <p class="wa__rules-group">Pago</p>
           <dl class="wa__rules-list">
-            <div><dt>Yape</dt><dd>Compras online y delivery</dd></div>
-            <div><dt>Efectivo</dt><dd>Solo si recoges tu pedido</dd></div>
+            <div><dt>Yape</dt><dd>Para pedidos con delivery</dd></div>
+            <div><dt>Efectivo</dt><dd>Pagas al recoger en San Borja</dd></div>
           </dl>
           <p class="wa__rules-group">Entrega</p>
           <dl class="wa__rules-list">
@@ -221,7 +221,7 @@
           </dl>
         </div>
         <details class="wa__item"><summary>¿Cómo compro?</summary><p>Agrega tus productos al carrito, toca Continuar, completa tus datos de entrega y confirma tu pedido. Verás el QR de Yape para pagar.</p></details>
-        <details class="wa__item"><summary>¿Cómo pago?</summary><p>Si compras online o pides delivery, pagas con Yape usando el QR que aparece al confirmar tu pedido. El pago en efectivo es solo si recoges tu pedido en San Borja.</p></details>
+        <details class="wa__item"><summary>¿Cómo pago?</summary><p>Si pides delivery, pagas con Yape: al confirmar tu pedido en la web te mostramos el QR. Si prefieres recoger tu pedido en San Borja, puedes pagar en efectivo al recogerlo.</p></details>
         <details class="wa__item"><summary>¿Cómo confirmo mi pago?</summary><p>Envíanos la constancia por WhatsApp junto con tu número de pedido.</p></details>
         <details class="wa__item"><summary>¿Hacen delivery?</summary><p>Sí, si decides que te lo enviemos, despachamos a todo el Perú con una empresa de delivery tercera.</p></details>
         <details class="wa__item"><summary>¿El delivery está incluido?</summary><p>No, el precio no incluye delivery. El costo varía según la localidad y te lo confirmamos por WhatsApp.</p></details>
@@ -241,6 +241,7 @@
       <div class="product__gallery">
         <div class="product__main">
           <img id="product-image" alt="">
+          <video id="product-video" controls playsinline preload="none" hidden></video>
           <div id="product-image-empty" class="tile__empty" hidden>Foto próximamente</div>
         </div>
         <p id="product-color-note" class="product__note" hidden>Foto en otro color</p>

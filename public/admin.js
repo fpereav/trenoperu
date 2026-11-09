@@ -529,7 +529,7 @@
     var head = el('div', 'photo-group__head');
     if (isColor) {
       var dot = el('span', 'dot');
-      dot.style.backgroundColor = COLOR_LIST[slot][1];
+      window.trenoPaint(dot, COLOR_LIST[slot][1]);
       head.appendChild(dot);
     }
     head.appendChild(el('span', '', colorName));
@@ -742,7 +742,7 @@
     var dots = el('span', 'product__dots');
     product.colors.forEach(function (color) {
       var dot = el('span', 'dot');
-      dot.style.backgroundColor = COLOR_LIST[color][1];
+      window.trenoPaint(dot, COLOR_LIST[color][1]);
       dot.title = COLOR_LIST[color][0];
       dots.appendChild(dot);
     });
@@ -924,7 +924,7 @@
       box.value = color;
       choice.appendChild(box);
       var dot = el('span', 'dot');
-      dot.style.backgroundColor = COLOR_LIST[color][1];
+      window.trenoPaint(dot, COLOR_LIST[color][1]);
       choice.appendChild(dot);
       choice.appendChild(document.createTextNode(COLOR_LIST[color][0]));
       return choice;

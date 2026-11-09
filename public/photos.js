@@ -3,7 +3,14 @@ window.TRENO_COLORS = {
   rosado: ['Rosado', '#F4A6C1'], negro: ['Negro', '#1A1A1A'], rojo: ['Rojo', '#D32F2F'],
   morado: ['Morado', '#7B4FA0'], plomo: ['Plomo', '#8A8D91'], verde: ['Verde', '#3E9B5A'],
   fucsia: ['Fucsia', '#E0197D'], marino: ['Azul marino', '#1F2F5C'], azul: ['Azul', '#2F6FD1'],
-  celeste: ['Celeste', '#6EC6E8'], naranja: ['Naranja', '#F28C28'], amarillo: ['Amarillo', '#F2C94C']
+  celeste: ['Celeste', '#6EC6E8'], naranja: ['Naranja', '#F28C28'], amarillo: ['Amarillo', '#F2C94C'],
+  multicolor: ['Multicolor', 'conic-gradient(#D32F2F, #F2C94C, #3E9B5A, #2F6FD1, #1A1A1A, #D32F2F)']
+};
+
+// Paints a color dot: plain colors as a fill, the multicolor key as a gradient.
+window.trenoPaint = function (node, value) {
+  if (/gradient\(/.test(value)) node.style.backgroundImage = value;
+  else node.style.backgroundColor = value;
 };
 
 // Built-in photos per product color, shared by the store and the admin panel.
@@ -36,4 +43,9 @@ window.TRENO_EXTRA_IMAGES = {
   SOGPVC: [{ file: 'soga-pvc-naranja-2.jpg', color: 'naranja' }],
   RUEABD: [2, 3, 4].map(n => ({ file: `rueda-abdominal-ancha-${n}.jpg` })),
   TUBRES: [2, 3, 4, 5, 6, 7].map(n => ({ file: `tubos-resistencia-set-${n}.jpg` }))
+};
+
+// Product videos, shown as the last view of the product gallery.
+window.TRENO_VIDEOS = {
+  TUBRES: { file: 'tubos-resistencia-set.mp4', poster: 'tubos-resistencia-set.jpg' }
 };

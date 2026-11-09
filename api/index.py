@@ -28,7 +28,7 @@ MAX_PHOTOS_PER_SLOT = 10
 COLOR_NAMES = {
     "rosado": "Rosado", "negro": "Negro", "rojo": "Rojo", "morado": "Morado", "plomo": "Plomo", "verde": "Verde",
     "fucsia": "Fucsia", "marino": "Azul marino", "azul": "Azul", "celeste": "Celeste", "naranja": "Naranja",
-    "amarillo": "Amarillo",
+    "amarillo": "Amarillo", "multicolor": "Multicolor",
 }
 EXCEL_COLUMNS = (
     "ID", "Nombre", "Categoría", "Presentación", "Precio (S/)", "Descuento (S/)",
@@ -52,7 +52,7 @@ SITE_URL = os.environ.get("SITE_URL", "https://trenoperu.vercel.app").rstrip("/"
 IMAGES_WITHOUT_FILE = {"roller-pvc.jpg"}
 COLOR_KEYS = (
     "rosado", "negro", "rojo", "morado", "plomo", "verde",
-    "fucsia", "marino", "azul", "celeste", "naranja", "amarillo",
+    "fucsia", "marino", "azul", "celeste", "naranja", "amarillo", "multicolor",
 )
 ORDERS_PER_IP_PER_HOUR = 5
 SESSION_SECONDS = 12 * 60 * 60

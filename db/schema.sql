@@ -295,3 +295,9 @@ UPDATE products SET price_cents = 9900
 WHERE id = 'TRXSIN' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'bands_trx_prices');
 
 INSERT INTO data_migrations (name) VALUES ('bands_trx_prices') ON CONFLICT (name) DO NOTHING;
+
+-- One-time change: band and tube sets are sold as one multicolor pack.
+UPDATE products SET colors = '["multicolor"]'::jsonb
+WHERE id IN ('TUBRES', 'BANLAT') AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'band_sets_multicolor');
+
+INSERT INTO data_migrations (name) VALUES ('band_sets_multicolor') ON CONFLICT (name) DO NOTHING;

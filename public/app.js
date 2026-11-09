@@ -10,6 +10,8 @@
   var PRICE_RANGES = { low: [0, 70], mid: [70, 150], high: [150, Infinity] };
   var COLOR_IMAGES = window.TRENO_COLOR_IMAGES || {};
   var EXTRA_IMAGES = window.TRENO_EXTRA_IMAGES || {};
+  var VIDEOS = window.TRENO_VIDEOS || {};
+  var VIDEO_DIR = 'assets/video/';
   var SIZE_IMAGES = window.TRENO_SIZE_IMAGES || {};
   var PRODUCT_HASH = /^#producto\/([A-Z0-9]+)$/;
   var HEART = 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z';
@@ -262,7 +264,7 @@
           setState({ picked: picked });
         }
       });
-      swatch.style.backgroundColor = COLORS[key][1];
+      window.trenoPaint(swatch, COLORS[key][1]);
       swatch.title = COLORS[key][0];
       swatch.setAttribute('aria-label', 'Color ' + COLORS[key][0] + ' para ' + title);
       swatch.setAttribute('aria-pressed', String(key === color));
@@ -310,28 +312,54 @@
     var gallery = galleryOf(p, color);
     var mainSrc = gallery.indexOf(state.detailPhoto) >= 0 ? state.detailPhoto : gallery[0] || (p.img ? missingPhoto(p) : fallbackPhoto(p));
 
+    var video = VIDEOS[p.id];
+    var videoSrc = video ? VIDEO_DIR + video.file : null;
+    var showVideo = !!videoSrc && state.detailPhoto === videoSrc;
+    var player = byId('product-video');
     var main = byId('product-image');
     main.alt = p.name;
-    main.hidden = false;
+    main.hidden = showVideo;
     byId('product-image-empty').hidden = true;
     if (main.getAttribute('src') !== mainSrc) main.src = mainSrc;
+    if (showVideo) {
+      if (player.getAttribute('src') !== videoSrc) {
+        player.poster = VIDEO_DIR + video.poster;
+        player.src = videoSrc;
+      }
+    } else if (player.getAttribute('src')) {
+      player.pause();
+      player.removeAttribute('src');
+      player.load();
+    }
+    player.hidden = !showVideo;
     var note = byId('product-color-note');
     var otherColor = hasColorPhotos(p) && !colorPhotos(p, color).length;
     var otherSize = SIZE_IMAGES[p.id] && (p.variants || []).length && !sizePhoto(p, color) && !urlsOf((p.photos || {})[color]).length;
     note.textContent = otherSize ? 'Foto referencial de otro tamaño' : 'Foto en otro color';
     note.hidden = !(otherColor || otherSize);
 
-    fill(byId('product-thumbs'), gallery.length < 2 ? [] : gallery.map(function (src, index) {
+    var thumbs = gallery.length < 2 && !videoSrc ? [] : gallery.map(function (src, index) {
       var thumb = button('product__thumb', undefined, function () { setState({ detailPhoto: src }); });
       thumb.setAttribute('aria-label', 'Ver imagen ' + (index + 1) + ' de ' + gallery.length);
-      thumb.setAttribute('aria-pressed', String(src === mainSrc));
+      thumb.setAttribute('aria-pressed', String(!showVideo && src === mainSrc));
       var image = el('img');
       image.src = src;
       image.alt = '';
       image.addEventListener('error', function () { thumb.remove(); });
       thumb.appendChild(image);
       return thumb;
-    }));
+    });
+    if (videoSrc) {
+      var videoThumb = button('product__thumb product__thumb--video', undefined, function () { setState({ detailPhoto: videoSrc }); });
+      videoThumb.setAttribute('aria-label', 'Ver video del producto');
+      videoThumb.setAttribute('aria-pressed', String(showVideo));
+      var poster = el('img');
+      poster.src = VIDEO_DIR + video.poster;
+      poster.alt = '';
+      videoThumb.appendChild(poster);
+      thumbs.push(videoThumb);
+    }
+    fill(byId('product-thumbs'), thumbs);
 
     byId('product-name').textContent = p.name;
     byId('product-meta').textContent = p.cat + ' · ' + COLORS[color][0];
@@ -358,7 +386,7 @@
 
     fill(byId('product-swatches'), p.colors.map(function (key) {
       var swatch = button('swatch swatch--large', undefined, function () { selectColor(p, key); });
-      swatch.style.backgroundColor = COLORS[key][1];
+      window.trenoPaint(swatch, COLORS[key][1]);
       swatch.title = COLORS[key][0];
       swatch.setAttribute('aria-label', 'Color ' + COLORS[key][0]);
       swatch.setAttribute('aria-pressed', String(key === color));
@@ -643,7 +671,7 @@
     fill(byId('color-filters'), Object.keys(COLORS).map(function (key) {
       var on = state.color === key;
       var dot = button('dot', undefined, function () { setState({ color: on ? null : key }); });
-      dot.style.backgroundColor = COLORS[key][1];
+      window.trenoPaint(dot, COLORS[key][1]);
       dot.setAttribute('aria-pressed', String(on));
       dot.setAttribute('aria-label', COLORS[key][0]);
       dot.title = COLORS[key][0];
@@ -929,6 +957,7 @@
     byId('product-close').addEventListener('click', closeDetail);
     // Covers Esc. The event can arrive late, so ignore it if another product opened meanwhile.
     byId('product').addEventListener('close', function () {
+      byId('product-video').pause();
       if (!byId('product').open) closeDetail();
     });
     byId('product').addEventListener('click', function (event) {
