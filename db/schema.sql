@@ -274,3 +274,9 @@ UPDATE products SET
 WHERE id = 'TUBRES' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'owner_photos_wheels_tubes');
 
 INSERT INTO data_migrations (name) VALUES ('owner_photos_wheels_tubes') ON CONFLICT (name) DO NOTHING;
+
+-- One-time price fix for the Carver Pro, above the basic wheel.
+UPDATE products SET price_cents = 4900
+WHERE id = 'ABCARV' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'carver_pro_price');
+
+INSERT INTO data_migrations (name) VALUES ('carver_pro_price') ON CONFLICT (name) DO NOTHING;
