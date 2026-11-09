@@ -205,3 +205,17 @@ WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_kettlebell_pa
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO data_migrations (name) VALUES ('vest_kettlebell_pack') ON CONFLICT (name) DO NOTHING;
+
+-- One-time load of the pink vest and ankle weight pack shown in the third banner.
+UPDATE products SET sort_order = sort_order + 1
+WHERE sort_order >= 1
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pink_vest_pack');
+
+INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, top, sort_order)
+SELECT 'PACKRO', 'Pack rosado: chaleco 10 kg + tobilleras 1 kg',
+  'Pack en color rosado con chaleco lastrado de 10 kg y tobilleras de 1 kg, ajustables, para sumar resistencia a tus entrenamientos. Más resistencia, más intensidad y más opciones para entrenar.',
+  'Packs', 6900, 'pack-chaleco-tobilleras-rosado.jpg', '["rosado"]'::jsonb, 2, false, 1
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pink_vest_pack')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO data_migrations (name) VALUES ('pink_vest_pack') ON CONFLICT (name) DO NOTHING;
