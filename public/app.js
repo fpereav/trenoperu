@@ -631,7 +631,9 @@
     // The same groups as the home tiles and the menu, only those with something on sale.
     var names = groupedEntries(catalogEntries()).map(function (group) { return group.name; });
     if (state.group && names.indexOf(state.group) < 0) names.push(state.group);
-    fill(byId('cats'), ['Todo'].concat(names).map(function (name) {
+    // "Todo" only makes sense inside a search, favorites or a color or price filter.
+    var otherFilters = !!state.query.trim() || state.onlyFavs || !!state.color || activePriceRanges().length > 0;
+    fill(byId('cats'), (otherFilters ? ['Todo'] : []).concat(names).map(function (name) {
       var all = name === 'Todo';
       var chip = button('chip', name, function () { setState({ group: all ? null : name, cat: 'Todo' }); });
       chip.setAttribute('aria-pressed', String(all ? !state.group && state.cat === 'Todo' : state.group === name));
@@ -667,10 +669,15 @@
     fill(byId('grid'), list.map(productCard));
     renderGroups();
     renderNav();
+    // The home shows only the groups. The product list appears after a group, a search or favorites is chosen.
+    var browsing = hasActiveFilters();
+    byId('catalogo').hidden = !browsing && !state.loadError;
     var title = byId('catalog-title');
     if (state.group) title.textContent = state.group;
+    else if (state.query.trim()) title.textContent = 'Resultados de “' + state.query.trim() + '”';
+    else if (state.onlyFavs) title.textContent = 'Tus favoritos';
     else fill(title, [document.createTextNode('Nuestro '), el('span', undefined, 'catálogo')]);
-    byId('show-all').hidden = !state.group;
+    byId('show-all').hidden = !browsing;
     renderHero();
     byId('count').textContent = products.length ? list.length + (list.length === 1 ? ' producto' : ' productos') : '';
     byId('empty').hidden = state.loadError || !state.loaded || list.length !== 0;
@@ -859,7 +866,10 @@
         byId('wa-toggle').focus();
       }
     });
-    byId('show-all').addEventListener('click', function () { setState({ group: null }); });
+    byId('show-all').addEventListener('click', function () {
+      clearFilters();
+      byId('groups').scrollIntoView();
+    });
     byId('search').addEventListener('input', function (e) { setState({ query: e.target.value }); });
     byId('sort').addEventListener('change', function (e) { setState({ sort: e.target.value }); });
     byId('favs-toggle').addEventListener('click', function () { setState({ onlyFavs: !state.onlyFavs }); });
