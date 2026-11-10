@@ -38,6 +38,7 @@ window.TRENO_EXTRA_IMAGES = {
   PACKRO: [{ file: 'pack-chaleco-tobilleras-rosado-info.jpg' }],
   PACK15: [{ file: 'pack-chaleco-15-tobilleras-2-info.jpg' }],
   PACK20: [{ file: 'pack-chaleco-20-tobilleras-2-info.jpg' }],
+  PACKPE: [{ file: 'pack-chaleco-pesa-info.jpg' }],
   TRXSIN: [{ file: 'trx-2.jpg' }, { file: 'trx-3.jpg' }, { file: 'trx-4.jpg' }],
   GUAPLA: [{ file: 'guantes-box-2.jpg', color: 'rojo' }, { file: 'guantes-box-3.jpg', color: 'rojo' }, { file: 'guantes-box-4.jpg', color: 'rojo' },
     { file: 'guantes-box-negro-2.jpg', color: 'negro' }, { file: 'guantes-box-negro-3.jpg', color: 'negro' }, { file: 'guantes-box-negro-4.jpg', color: 'negro' }],
