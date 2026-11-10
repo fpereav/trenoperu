@@ -272,16 +272,21 @@ def answer_for(text, products, last_reply=""):
 # ---------- webhook security ----------
 
 def signature_ok(raw_body, header):
-    secret = os.environ.get("WHATSAPP_APP_SECRET", "")
+    secret = os.environ.get("WHATSAPP_APP_SECRET", "").strip()
     if not secret or not header or not header.startswith("sha256="):
+        print(f"whatsapp: missing signature or secret (secret length {len(secret)})")
         return False
     expected = hmac.new(secret.encode(), raw_body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, header[len("sha256="):].strip())
+    if hmac.compare_digest(expected, header[len("sha256="):].strip()):
+        return True
+    # Meta App Secrets are 32 hex characters; the length helps spot a wrong value without revealing it.
+    print(f"whatsapp: signature mismatch (secret length {len(secret)}, hex {all(c in '0123456789abcdef' for c in secret)})")
+    return False
 
 
 def verify_subscription(query):
     """Meta's GET handshake. Returns the challenge to echo, or None."""
-    token = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+    token = os.environ.get("WHATSAPP_VERIFY_TOKEN", "").strip()
     mode = query.get("hub.mode", [""])[0]
     given = query.get("hub.verify_token", [""])[0]
     challenge = query.get("hub.challenge", [""])[0]
@@ -342,7 +347,7 @@ def prune(conn):
 # ---------- WhatsApp sending ----------
 
 def send_whatsapp(to, body):
-    phone_id = os.environ["WHATSAPP_PHONE_NUMBER_ID"]
+    phone_id = os.environ["WHATSAPP_PHONE_NUMBER_ID"].strip()
     request = urllib.request.Request(
         f"https://graph.facebook.com/{GRAPH_VERSION}/{phone_id}/messages",
         data=json.dumps({
@@ -353,7 +358,7 @@ def send_whatsapp(to, body):
             "text": {"preview_url": True, "body": body[:4000]},
         }).encode(),
         headers={
-            "Authorization": "Bearer " + os.environ["WHATSAPP_TOKEN"],
+            "Authorization": "Bearer " + os.environ["WHATSAPP_TOKEN"].strip(),
             "Content-Type": "application/json",
         },
         method="POST",
@@ -382,7 +387,7 @@ def reply_to(conn, phone, text, products_loader, send):
 def handle_webhook(payload, connect, products_loader, send=None):
     """Processes one Meta webhook delivery. Returns how many customer messages were handled."""
     send = send or send_whatsapp
-    my_phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+    my_phone_id = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "").strip()
     handled = 0
     conn = connect()
     try:
