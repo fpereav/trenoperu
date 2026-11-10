@@ -39,6 +39,41 @@
 
   function byId(id) { return document.getElementById(id); }
 
+  // Fictional reviews used only to test the testimonials layout. They are never
+  // shown to the public: the section appears only on localhost or with
+  // ?prueba=testimonios. Replace them with real customer reviews before going live.
+  var TEST_REVIEWS = [
+    { name: 'Cliente de prueba 1', place: 'Surco', product: 'Pack chaleco 10 kg + tobilleras', text: 'Llegó rápido y bien empacado. El chaleco se ajusta cómodo y no se mueve al correr.' },
+    { name: 'Cliente de prueba 2', place: 'San Borja', product: 'Pesa rusa', text: 'Lo recogí en tienda y me explicaron cómo usarla. Muy buena atención por WhatsApp.' },
+    { name: 'Cliente de prueba 3', place: 'Miraflores', product: 'Tobilleras 1 kg', text: 'Las uso para glúteos en casa y se sienten la diferencia. Pagué con Yape sin problema.' },
+    { name: 'Cliente de prueba 4', place: 'Arequipa', product: 'Pack chaleco 15 kg + tobilleras', text: 'El delivery a provincia llegó en pocos días. Buena calidad por el precio.' },
+    { name: 'Cliente de prueba 5', place: 'La Molina', product: 'Bandas de resistencia', text: 'El pack trae varios niveles, ideal para empezar. Volvería a comprar.' },
+    { name: 'Cliente de prueba 6', place: 'Jesús María', product: 'Mat de yoga rosado', text: 'Bonito color y no resbala. Me respondieron todas mis dudas antes de comprar.' },
+    { name: 'Cliente de prueba 7', place: 'Trujillo', product: 'Soga para saltar', text: 'Liviana y fácil de ajustar. Todo tal como en las fotos.' }
+  ];
+
+  function renderTestReviews() {
+    var section = byId('testimonios');
+    var host = location.hostname;
+    var isPreview = host === 'localhost' || host === '127.0.0.1' || /[?&]prueba=testimonios\b/.test(location.search);
+    if (!section || !isPreview) return;
+    var list = byId('reviews-list');
+    TEST_REVIEWS.forEach(function (review) {
+      var item = el('li', 'review');
+      var stars = el('p', 'review__stars', '★★★★★');
+      stars.setAttribute('aria-label', '5 de 5 estrellas');
+      item.appendChild(stars);
+      item.appendChild(el('blockquote', 'review__text', review.text));
+      var who = el('p', 'review__who');
+      who.appendChild(el('strong', null, review.name));
+      who.appendChild(el('span', null, review.place + ' · ' + review.product));
+      item.appendChild(who);
+      item.appendChild(el('span', 'review__badge', 'Prueba'));
+      list.appendChild(item);
+    });
+    section.hidden = false;
+  }
+
   function el(tag, className, text) {
     var node = document.createElement(tag);
     if (className) node.className = className;
@@ -936,6 +971,7 @@
     });
     byId('cart-keep-shopping').addEventListener('click', function () { byId('cart').close(); });
     window.addEventListener('hashchange', syncDetailWithHash);
+    renderTestReviews();
     document.querySelectorAll('[data-ig-scroll]').forEach(function (nav) {
       nav.addEventListener('click', function () {
         var strip = byId('ig-strip');

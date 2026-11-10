@@ -234,6 +234,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .about__secondary:hover { border-color: #ffffff; background: #ffffff; color: var(--ink); }
 
 /* Instagram */
+.reviews { padding-block: 32px 0; }
+.reviews__test-note { margin: 0 auto 20px; padding: 8px 14px; width: fit-content; max-width: 100%; border: 1px dashed var(--accent-text); border-radius: 8px; color: var(--accent-text); font-size: 14px; text-align: center; }
+.reviews__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; }
+.review { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: #ffffff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 4px 14px rgba(0, 0, 0, 0.06); }
+.review__stars { margin: 0; color: #F5A623; font-size: 18px; letter-spacing: 2px; }
+.review__text { flex: 1; margin: 0; color: var(--ink); line-height: 1.5; }
+.review__who { margin: 0; font-size: 14px; }
+.review__who strong { display: block; }
+.review__who span { color: var(--muted); }
+.review__badge { position: absolute; top: 14px; right: 14px; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .social { padding-block: 32px 64px; }
 .social__link { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 24px 0 0; }
 .ig-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 32px 0 16px; }
