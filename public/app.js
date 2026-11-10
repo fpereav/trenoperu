@@ -68,7 +68,6 @@
       who.appendChild(el('strong', null, review.name));
       who.appendChild(el('span', null, review.place + ' · ' + review.product));
       item.appendChild(who);
-      item.appendChild(el('span', 'review__badge', 'Prueba'));
       list.appendChild(item);
     });
     section.hidden = false;

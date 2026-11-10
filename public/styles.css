@@ -243,7 +243,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .review__who { margin: 0; font-size: 14px; }
 .review__who strong { display: block; }
 .review__who span { color: var(--muted); }
-.review__badge { position: absolute; top: 14px; right: 14px; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
 .social { padding-block: 32px 64px; }
 .social__link { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 24px 0 0; }
 .ig-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 32px 0 16px; }
