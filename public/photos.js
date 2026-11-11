@@ -79,11 +79,9 @@ window.TRENO_GROUP_VIDEOS = {
     { at: 7.6, name: 'Remo con tubos', tip: 'Tubos anclados a la puerta, jala las manijas hacia el abdomen.' }
   ] },
   'Funcional': { file: 'uso-funcional.mp4', poster: 'uso-funcional.jpg', steps: [
-    { at: 0, name: 'Rollout con rueda', tip: 'De rodillas, rueda hacia adelante con el abdomen firme y regresa.' }
-  ] },
-  'Mats': { file: 'uso-mats.mp4', poster: 'uso-mats.jpg', steps: [
-    { at: 0, name: 'Plancha', tip: 'Apoya antebrazos y puntas de los pies, cuerpo recto y abdomen firme.' },
-    { at: 3.8, name: 'Perro boca abajo', tip: 'Manos y pies en el mat, cadera arriba y piernas estiradas.' }
+    { at: 0, name: 'Rollout con rueda', tip: 'De rodillas, rueda hacia adelante con el abdomen firme y regresa.' },
+    { at: 3.8, name: 'Plancha en el mat', tip: 'Apoya antebrazos y puntas de los pies, cuerpo recto y abdomen firme.' },
+    { at: 7.6, name: 'Perro boca abajo', tip: 'Manos y pies en el mat, cadera arriba y piernas estiradas.' }
   ] },
   'Sogas para saltar': { file: 'uso-sogas.mp4', poster: 'uso-sogas.jpg', steps: [
     { at: 0, name: 'Salto básico', tip: 'Codos pegados al cuerpo, gira la soga con las muñecas.' },
