@@ -79,7 +79,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Header */
 .promo-bar {
   padding: 8px 16px;
-  background: var(--ink);
+  border-bottom: 1px solid #222226;
+  background: #000000;
   color: #ffffff;
   font-size: 13px;
   font-weight: 500;
@@ -94,6 +95,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .logo--badge { padding: 8px 16px; border-radius: 12px; background: linear-gradient(135deg, #1a1a1a, #2b2b2b); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); transition: transform 0.2s, box-shadow 0.2s; }
 .logo--badge:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24); }
 .logo--badge img { height: 36px; }
+/* On the black band the logo stands on its own, without the badge box. */
+.site-header__bar .logo--badge { padding: 0; border-radius: 0; background: none; box-shadow: none; }
+.site-header__bar .logo--badge:hover { box-shadow: none; opacity: 0.85; }
+.site-header__bar .logo--badge img { height: 40px; }
 .site-nav { display: flex; gap: 10px; min-width: 0; padding: 8px 40px 12px 4px; overflow-x: auto; scrollbar-width: none; font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
 .site-nav::-webkit-scrollbar { display: none; }
 .site-nav a { flex: none; padding: 8px 16px; border-radius: 999px; background: #ffffff; text-decoration: none; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.08); transition: background-color 0.2s, box-shadow 0.2s, color 0.2s, transform 0.2s; }
