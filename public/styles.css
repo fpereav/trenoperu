@@ -87,13 +87,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .site-header { background: #ffffff; }
+.site-header__bar { background: #000000; color: #ffffff; }
 .site-header__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 32px; min-height: 80px; padding-block: 12px; }
 .logo { display: block; flex: none; line-height: 0; }
 .logo img { display: block; width: auto; height: 44px; }
 .logo--badge { padding: 8px 16px; border-radius: 12px; background: linear-gradient(135deg, #1a1a1a, #2b2b2b); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); transition: transform 0.2s, box-shadow 0.2s; }
 .logo--badge:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24); }
 .logo--badge img { height: 36px; }
-.site-nav { order: 3; flex-basis: 100%; display: flex; gap: 10px; min-width: 0; padding: 8px 40px 12px 4px; overflow-x: auto; scrollbar-width: none; font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+.site-nav { display: flex; gap: 10px; min-width: 0; padding: 8px 40px 12px 4px; overflow-x: auto; scrollbar-width: none; font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
 .site-nav::-webkit-scrollbar { display: none; }
 .site-nav a { flex: none; padding: 8px 16px; border-radius: 999px; background: #ffffff; text-decoration: none; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.08); transition: background-color 0.2s, box-shadow 0.2s, color 0.2s, transform 0.2s; }
 .site-nav a:hover { color: var(--ink); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18); transform: translateY(-1px); }
@@ -101,12 +102,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .site-nav__groups { display: contents; }
 .site-nav a[aria-current] { background: var(--accent); color: var(--ink); box-shadow: 0 3px 12px rgba(255, 70, 112, 0.45); }
 .site-header__tools { display: flex; flex: 1 1 260px; align-items: center; justify-content: flex-end; gap: 4px; }
-.search { display: flex; flex: 0 1 240px; align-items: center; gap: 8px; min-width: 0; height: 44px; padding: 0 14px; margin-right: 8px; border-radius: 4px; background: var(--soft); }
-.search input { width: 100%; min-width: 0; border: 0; background: transparent; font-size: 14px; outline: none; }
-.search:focus-within { outline: 2px solid var(--ink); }
-.icon-button { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 4px; background: transparent; cursor: pointer; }
-.icon-button[aria-pressed="true"] { background: var(--soft); }
-.count-badge { position: absolute; top: 3px; right: 1px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--accent); font-size: 11px; font-weight: 700; }
+.search { display: flex; flex: 0 1 240px; align-items: center; gap: 8px; min-width: 0; height: 44px; padding: 0 14px; margin-right: 8px; border-radius: 4px; background: #1E1E22; color: #ffffff; }
+.search input { width: 100%; min-width: 0; border: 0; background: transparent; color: #ffffff; font-size: 14px; outline: none; }
+.search input::placeholder { color: #A0A0A8; }
+.search:focus-within { outline: 2px solid var(--accent); }
+.icon-button { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
+.icon-button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.16); }
+.count-badge { position: absolute; top: 3px; right: 1px; display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--accent); color: var(--ink); font-size: 11px; font-weight: 700; }
 
 /* Hero */
 .hero { background: #000000; }
@@ -404,7 +406,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .form-error { margin: 0; color: var(--accent-text); font-size: 14px; }
 
 @media (max-width: 1100px) {
-  .site-nav { order: 3; flex-basis: 100%; }
 }
 
 @media (max-width: 900px) {
