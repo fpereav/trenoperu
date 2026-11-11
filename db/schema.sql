@@ -323,6 +323,29 @@ WHERE v.product_id = n.product_id AND v.label = n.label
 
 INSERT INTO data_migrations (name) VALUES ('market_prices_nov') ON CONFLICT (name) DO NOTHING;
 
+-- One-time split of the vest and the ankle weights by weight. Stock from the kardex (all colors together),
+-- prices set against the Peruvian market (Nov 2026).
+INSERT INTO product_variants (product_id, label, price_cents, discount_cents, stock)
+SELECT o.product_id, o.label, o.price, 0, o.stock
+FROM (VALUES
+  (1, 'CHASIN', '10 kg', 9900, 8), (2, 'CHASIN', '15 kg', 11900, 3), (3, 'CHASIN', '20 kg', 13900, 1),
+  (4, 'TOBPLA', '1 kg', 2900, 13), (5, 'TOBPLA', '2 kg', 3900, 8), (6, 'TOBPLA', '3 kg', 4900, 6),
+  (7, 'TOBPLA', '4 kg', 5900, 6), (8, 'TOBPLA', '5 kg', 6900, 4)
+) AS o (position, product_id, label, price, stock)
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_ankle_weights')
+  AND NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = o.product_id)
+ORDER BY o.position;
+
+UPDATE products SET name = 'Chaleco con peso',
+  description = 'Chaleco lastrado ajustable para sumar intensidad a tus entrenamientos. Disponible en 10, 15 y 20 kg.'
+WHERE id = 'CHASIN' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_ankle_weights');
+
+UPDATE products SET name = 'Tobilleras con peso (par)',
+  description = 'Par de tobilleras con peso y cierre de velcro, para piernas y glúteos. Disponibles de 1 a 5 kg cada una.'
+WHERE id = 'TOBPLA' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_ankle_weights');
+
+INSERT INTO data_migrations (name) VALUES ('vest_ankle_weights') ON CONFLICT (name) DO NOTHING;
+
 -- WhatsApp bot: recent customer chats (kept 7 days) and chats handed to a person.
 CREATE TABLE IF NOT EXISTS wa_messages (
   id         bigserial PRIMARY KEY,
