@@ -459,9 +459,7 @@
     ['Chalecos con peso', /chaleco/],
     ['Tobilleras', /tobillera/],
     ['Resistencia', /\btrx\b|\bbandas?\b|tubos? de resistencia/],
-    ['Funcional', /rueda abdominal|\bmats?\b/],
-    ['Sogas para saltar', /\bsogas?\b/],
-    ['Steps', /\bsteps?\b/],
+    ['Funcional', /rueda abdominal|\bmats?\b|\bsogas?\b|\bsteps?\b/],
     ['Guantes de box', /guantes?/],
     ['Rollers', /\brollers?\b/]
   ];
