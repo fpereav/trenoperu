@@ -346,6 +346,12 @@ WHERE id = 'TOBPLA' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = '
 
 INSERT INTO data_migrations (name) VALUES ('vest_ankle_weights') ON CONFLICT (name) DO NOTHING;
 
+-- One-time: the vest shows black first (the store opens a product on its first color).
+UPDATE products SET colors = '["negro","rosado","verde","plomo"]'::jsonb
+WHERE id = 'CHASIN' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_black_first');
+
+INSERT INTO data_migrations (name) VALUES ('vest_black_first') ON CONFLICT (name) DO NOTHING;
+
 -- WhatsApp bot: recent customer chats (kept 7 days) and chats handed to a person.
 CREATE TABLE IF NOT EXISTS wa_messages (
   id         bigserial PRIMARY KEY,
