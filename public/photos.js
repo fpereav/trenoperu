@@ -20,6 +20,9 @@ window.TRENO_COLOR_IMAGES = {
   MANVIN: { rosado: 'mancuerna-vinilo.jpg', morado: 'mancuerna-vinilo-morado.jpg', rojo: 'mancuerna-vinilo-rojo.jpg' },
   MATGOM: { rosado: 'mat-goma-eva.jpg', fucsia: 'mat-goma-eva-fucsia.jpg', verde: 'mat-goma-eva-verde.jpg' },
   TOBPLA: { rosado: 'tobillera-peso.jpg', negro: 'tobillera-peso-negro.jpg', azul: 'tobillera-peso-azul.jpg' },
+  PACKCH: { negro: 'pack-chaleco-tobilleras.jpg', rosado: 'pack-chaleco-tobilleras-rosado.jpg', verde: 'pack-chaleco-tobilleras-verde.jpg', plomo: 'pack-chaleco-tobilleras-plomo.jpg' },
+  PACKPE: { negro: 'pack-chaleco-pesa.jpg', rosado: 'pack-chaleco-pesa-rosado.jpg', verde: 'pack-chaleco-pesa-verde.jpg', plomo: 'pack-chaleco-pesa-plomo.jpg' },
+  PACKBA: { negro: 'pack-chaleco-bandas.jpg', rosado: 'pack-chaleco-bandas-rosado.jpg', verde: 'pack-chaleco-bandas-verde.jpg', plomo: 'pack-chaleco-bandas-plomo.jpg' },
   CHASIN: { negro: 'chaleco-peso-negro.jpg', rosado: 'chaleco-peso.jpg', verde: 'chaleco-peso-verde.jpg', plomo: 'chaleco-peso-plomo.jpg' },
   SOGPVC: { celeste: 'soga-pvc.jpg', naranja: 'soga-pvc-naranja.jpg' },
   STEPVC: { azul: 'step-pvc.jpg', plomo: 'step-pvc-plomo.jpg' },
@@ -34,11 +37,9 @@ window.TRENO_SIZE_IMAGES = {
 
 // More built-in views. With a color they belong to that color; without one they are general.
 window.TRENO_EXTRA_IMAGES = {
-  PACKCH: [{ file: 'pack-chaleco-tobilleras-info.jpg' }, { file: 'promo-pack-chaleco.jpg' }],
   PACKRO: [{ file: 'pack-chaleco-tobilleras-rosado-info.jpg' }],
   PACK15: [{ file: 'pack-chaleco-15-tobilleras-2-info.jpg' }],
   PACK20: [{ file: 'pack-chaleco-20-tobilleras-2-info.jpg' }],
-  PACKPE: [{ file: 'pack-chaleco-pesa-info.jpg' }],
   TRXSIN: [{ file: 'trx-2.jpg' }, { file: 'trx-3.jpg' }, { file: 'trx-4.jpg' }],
   GUAPLA: [{ file: 'guantes-box-2.jpg', color: 'rojo' }, { file: 'guantes-box-3.jpg', color: 'rojo' }, { file: 'guantes-box-4.jpg', color: 'rojo' },
     { file: 'guantes-box-negro-2.jpg', color: 'negro' }, { file: 'guantes-box-negro-3.jpg', color: 'negro' }, { file: 'guantes-box-negro-4.jpg', color: 'negro' }],

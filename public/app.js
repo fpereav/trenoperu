@@ -635,7 +635,7 @@
       if (!slide.hidden) available += 1;
     });
     byId('promo').hidden = hasActiveFilters() || available === 0;
-    var key = heroSlides().map(function (slide) { return slide.dataset.pack; }).join('|');
+    var key = heroSlides().map(function (slide) { return slide.dataset.pack + (slide.dataset.packSlide || ''); }).join('|');
     if (key === heroKey) return;
     heroKey = key;
     var slides = heroSlides();
@@ -1020,7 +1020,7 @@
     document.querySelectorAll('[data-pack-add]').forEach(function (button) {
       button.addEventListener('click', function () {
         var pack = products.find(function (p) { return p.id === button.dataset.packAdd; });
-        if (pack && pack.inStock) addToCart(pack);
+        if (pack && pack.inStock) addToCart(pack, null, button.dataset.packColor);
       });
     });
     var hero = byId('promo');

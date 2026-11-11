@@ -352,6 +352,44 @@ WHERE id = 'CHASIN' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = '
 
 INSERT INTO data_migrations (name) VALUES ('vest_black_first') ON CONFLICT (name) DO NOTHING;
 
+-- One-time: each vest pack becomes one product with every vest color and weight.
+-- The single-color and single-weight packs it replaces are taken off sale (stock 0) but kept for old orders.
+UPDATE products SET sort_order = sort_order + 1
+WHERE sort_order > (SELECT sort_order FROM products WHERE id = 'PACKPE')
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs_all_options');
+
+INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, top, sort_order)
+SELECT 'PACKBA', 'Pack chaleco + bandas de resistencia',
+  'Pack con chaleco lastrado ajustable y set de 5 bandas de látex con 5 intensidades. Elige el peso del chaleco (10, 15 o 20 kg) y su color. Fuerza, glúteos y piernas en casa.',
+  'Packs', 11900, 'pack-chaleco-bandas.jpg', '["negro","rosado","verde","plomo"]'::jsonb, 0, false,
+  (SELECT sort_order + 1 FROM products WHERE id = 'PACKPE')
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs_all_options')
+ON CONFLICT (id) DO NOTHING;
+
+UPDATE products SET name = 'Pack chaleco + tobilleras', colors = '["negro","rosado","verde","plomo"]'::jsonb,
+  description = 'Pack con chaleco lastrado ajustable y un par de tobilleras con peso. Elige el peso (10 kg con tobilleras de 1 kg, o 15 y 20 kg con tobilleras de 2 kg) y el color.'
+WHERE id = 'PACKCH' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs_all_options');
+
+UPDATE products SET name = 'Pack chaleco + pesa rusa 4 kg', colors = '["negro","rosado","verde","plomo"]'::jsonb,
+  description = 'Pack con chaleco lastrado ajustable y pesa rusa de PVC de 4 kg para entrenar fuerza y resistencia donde quieras. Elige el peso del chaleco (10, 15 o 20 kg) y su color.'
+WHERE id = 'PACKPE' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs_all_options');
+
+UPDATE products SET stock = 0
+WHERE id IN ('PACKRO', 'PACK15', 'PACK20') AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs_all_options');
+
+INSERT INTO product_variants (product_id, label, price_cents, discount_cents, stock)
+SELECT o.product_id, o.label, o.price, 0, o.stock
+FROM (VALUES
+  (1, 'PACKCH', '10 kg + tobilleras 1 kg', 6900, 8), (2, 'PACKCH', '15 kg + tobilleras 2 kg', 8900, 3), (3, 'PACKCH', '20 kg + tobilleras 2 kg', 10900, 1),
+  (4, 'PACKPE', '10 kg', 8900, 8), (5, 'PACKPE', '15 kg', 10900, 3), (6, 'PACKPE', '20 kg', 12900, 1),
+  (7, 'PACKBA', '10 kg', 11900, 8), (8, 'PACKBA', '15 kg', 13900, 3), (9, 'PACKBA', '20 kg', 15900, 1)
+) AS o (position, product_id, label, price, stock)
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_packs_all_options')
+  AND NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = o.product_id)
+ORDER BY o.position;
+
+INSERT INTO data_migrations (name) VALUES ('vest_packs_all_options') ON CONFLICT (name) DO NOTHING;
+
 -- WhatsApp bot: recent customer chats (kept 7 days) and chats handed to a person.
 CREATE TABLE IF NOT EXISTS wa_messages (
   id         bigserial PRIMARY KEY,
