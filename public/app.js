@@ -785,6 +785,7 @@
     else if (state.onlyFavs) title.textContent = 'Tus favoritos';
     else fill(title, [document.createTextNode('Nuestro '), el('span', undefined, 'catálogo')]);
     byId('show-all').hidden = !browsing;
+    document.querySelector('.catalog__intro').hidden = !!state.group;
     renderGroupVideo();
     renderHero();
     byId('count').textContent = products.length ? list.length + (list.length === 1 ? ' producto' : ' productos') : '';

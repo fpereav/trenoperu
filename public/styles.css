@@ -195,7 +195,10 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .group-tile__media img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .group-tile__name { font-family: var(--display); font-size: 20px; font-weight: 800; line-height: 1.1; text-transform: uppercase; }
 .group-tile__count { color: var(--muted); font-size: 12px; }
-.catalog__back { margin: 4px 0 0; text-align: center; }
+/* Back link, top left of the catalog, above the how-to video. */
+.catalog__back { margin: -32px 0 12px; }
+.catalog__back .link-button { min-height: 36px; padding: 0 14px; border-radius: 18px; background: var(--soft); color: var(--ink); font-size: 13px; font-weight: 700; text-decoration: none; }
+.catalog__back .link-button:hover { background: #E2E2E2; }
 .catalog__back:has(button[hidden]) { display: none; }
 
 /* Product grid */
