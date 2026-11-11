@@ -84,6 +84,10 @@ window.TRENO_GROUP_VIDEOS = {
     { at: 7.6, name: 'Perro boca abajo', tip: 'Manos y pies en el mat, cadera arriba y piernas estiradas.' },
     { at: 11.4, name: 'Salto con soga', tip: 'Codos pegados al cuerpo, gira la soga con las muñecas y salta en puntas.' }
   ] },
+  'Guantes de box': { file: 'uso-guantes.mp4', poster: 'uso-guantes.jpg', steps: [
+    { at: 0, name: 'Golpes al saco', tip: 'Guardia arriba, gira la cadera en cada golpe y regresa la mano a la cara.' },
+    { at: 3.8, name: 'Sombra (shadow boxing)', tip: 'Sin saco: lanza jab y directo al aire, pies en movimiento y mentón abajo.' }
+  ] },
   'Sogas para saltar': { file: 'uso-sogas.mp4', poster: 'uso-sogas.jpg', steps: [
     { at: 0, name: 'Salto básico', tip: 'Codos pegados al cuerpo, gira la soga con las muñecas.' },
     { at: 3.8, name: 'Salto en puntas', tip: 'Saltos cortos y rápidos sobre la punta de los pies.' }
