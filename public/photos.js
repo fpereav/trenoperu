@@ -53,9 +53,41 @@ window.TRENO_EXTRA_IMAGES = {
 // How-to video shown above a group's products. Keys are the group names in app.js;
 // each step starts at "at" seconds into the video, which shows one photo per step.
 window.TRENO_GROUP_VIDEOS = {
+  'Packs': { file: 'uso-packs.mp4', poster: 'uso-packs.jpg', steps: [
+    { at: 0, name: 'Sentadilla con chaleco y tobilleras', tip: 'Brazos al frente, baja hasta que los muslos queden paralelos al piso.' },
+    { at: 3.8, name: 'Zancadas', tip: 'Da un paso largo y baja la rodilla de atrás cerca del piso, espalda recta.' }
+  ] },
   'Pesas rusas': { file: 'uso-pesas-rusas.mp4', poster: 'uso-pesas-rusas.jpg', steps: [
     { at: 0, name: 'Swing', tip: 'Empuja con la cadera y lleva la pesa a la altura del pecho, brazos rectos.' },
     { at: 3.8, name: 'Sentadilla goblet', tip: 'Pesa pegada al pecho, baja con la espalda recta y sube.' }
+  ] },
+  'Mancuernas': { file: 'uso-mancuernas.mp4', poster: 'uso-mancuernas.jpg', steps: [
+    { at: 0, name: 'Curl de bíceps', tip: 'Codos pegados al cuerpo, sube las mancuernas hacia los hombros.' },
+    { at: 3.8, name: 'Press de hombros', tip: 'Sentado y con la espalda recta, empuja las mancuernas sobre la cabeza.' }
+  ] },
+  'Chalecos con peso': { file: 'uso-chalecos.mp4', poster: 'uso-chalecos.jpg', steps: [
+    { at: 0, name: 'Flexiones', tip: 'Con el chaleco puesto, cuerpo recto de la cabeza a los pies.' },
+    { at: 3.8, name: 'Subir escaleras', tip: 'Camina o trota con el chaleco para sumar intensidad al cardio.' }
+  ] },
+  'Tobilleras': { file: 'uso-tobilleras.mp4', poster: 'uso-tobilleras.jpg', steps: [
+    { at: 0, name: 'Patada de glúteo', tip: 'En cuatro apoyos, lleva una pierna atrás y arriba sin arquear la espalda.' },
+    { at: 3.8, name: 'Elevación lateral', tip: 'De pie y apoyado en una silla, sube la pierna hacia el costado.' }
+  ] },
+  'Resistencia': { file: 'uso-resistencia.mp4', poster: 'uso-resistencia.jpg', steps: [
+    { at: 0, name: 'Remo con TRX', tip: 'Ancla el TRX a la puerta, inclínate atrás y jala con el cuerpo recto.' },
+    { at: 3.8, name: 'Sentadilla con banda', tip: 'Banda sobre las rodillas, empuja las rodillas hacia afuera al bajar.' },
+    { at: 7.6, name: 'Remo con tubos', tip: 'Tubos anclados a la puerta, jala las manijas hacia el abdomen.' }
+  ] },
+  'Funcional': { file: 'uso-funcional.mp4', poster: 'uso-funcional.jpg', steps: [
+    { at: 0, name: 'Rollout con rueda', tip: 'De rodillas, rueda hacia adelante con el abdomen firme y regresa.' }
+  ] },
+  'Mats': { file: 'uso-mats.mp4', poster: 'uso-mats.jpg', steps: [
+    { at: 0, name: 'Plancha', tip: 'Apoya antebrazos y puntas de los pies, cuerpo recto y abdomen firme.' },
+    { at: 3.8, name: 'Perro boca abajo', tip: 'Manos y pies en el mat, cadera arriba y piernas estiradas.' }
+  ] },
+  'Sogas para saltar': { file: 'uso-sogas.mp4', poster: 'uso-sogas.jpg', steps: [
+    { at: 0, name: 'Salto básico', tip: 'Codos pegados al cuerpo, gira la soga con las muñecas.' },
+    { at: 3.8, name: 'Salto en puntas', tip: 'Saltos cortos y rápidos sobre la punta de los pies.' }
   ] }
 };
 
