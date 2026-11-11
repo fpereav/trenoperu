@@ -50,6 +50,15 @@ window.TRENO_EXTRA_IMAGES = {
   TUBRES: [2, 3, 4, 5, 6, 7].map(n => ({ file: `tubos-resistencia-set-${n}.jpg` }))
 };
 
+// How-to video shown above a group's products. Keys are the group names in app.js;
+// each step starts at "at" seconds into the video, which shows one photo per step.
+window.TRENO_GROUP_VIDEOS = {
+  'Pesas rusas': { file: 'uso-pesas-rusas.mp4', poster: 'uso-pesas-rusas.jpg', steps: [
+    { at: 0, name: 'Swing', tip: 'Empuja con la cadera y lleva la pesa a la altura del pecho, brazos rectos.' },
+    { at: 3.8, name: 'Sentadilla goblet', tip: 'Pesa pegada al pecho, baja con la espalda recta y sube.' }
+  ] }
+};
+
 // Product videos, shown as the last view of the product gallery.
 window.TRENO_VIDEOS = {
   TUBRES: { file: 'tubos-resistencia-set.mp4', poster: 'tubos-resistencia-set.jpg' }

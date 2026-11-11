@@ -652,6 +652,51 @@
     showSlide(0);
   }
 
+  // How-to video shown above the products of a group, when that group has one.
+  var GROUP_VIDEOS = window.TRENO_GROUP_VIDEOS || {};
+  var groupVideoShown = null;
+
+  function renderGroupVideo() {
+    var info = state.group ? GROUP_VIDEOS[state.group] : null;
+    var video = byId('group-video-player');
+    byId('group-video').hidden = !info;
+    if (!info) {
+      if (groupVideoShown) {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        groupVideoShown = null;
+      }
+      return;
+    }
+    if (groupVideoShown === state.group) return;
+    groupVideoShown = state.group;
+    byId('group-video-title').textContent = state.group;
+    fill(byId('group-video-steps'), info.steps.map(function (step) {
+      var item = el('li', 'group-video__step');
+      item.appendChild(el('strong', undefined, step.name));
+      item.appendChild(el('span', undefined, step.tip));
+      return item;
+    }));
+    video.poster = IMG + info.poster;
+    video.src = VIDEO_DIR + info.file;
+    syncGroupVideoStep();
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) video.controls = true;
+    else video.play().catch(function () { video.controls = true; });
+  }
+
+  // Highlights the step the video is showing.
+  function syncGroupVideoStep() {
+    var info = GROUP_VIDEOS[groupVideoShown];
+    if (!info) return;
+    var time = byId('group-video-player').currentTime;
+    var current = 0;
+    info.steps.forEach(function (step, i) { if (time >= step.at) current = i; });
+    Array.prototype.forEach.call(byId('group-video-steps').children, function (item, i) {
+      item.classList.toggle('is-current', i === current);
+    });
+  }
+
   function pickGroup(name) {
     setState({ group: name, cat: 'Todo' });
     byId('catalogo').scrollIntoView();
@@ -740,6 +785,7 @@
     else if (state.onlyFavs) title.textContent = 'Tus favoritos';
     else fill(title, [document.createTextNode('Nuestro '), el('span', undefined, 'catálogo')]);
     byId('show-all').hidden = !browsing;
+    renderGroupVideo();
     renderHero();
     byId('count').textContent = products.length ? list.length + (list.length === 1 ? ' producto' : ' productos') : '';
     byId('empty').hidden = state.loadError || !state.loaded || list.length !== 0;
@@ -1004,6 +1050,7 @@
     window.addEventListener('hashchange', syncDetailWithHash);
     renderTestReviews();
     initPromo();
+    byId('group-video-player').addEventListener('timeupdate', syncGroupVideoStep);
     document.querySelectorAll('[data-ig-scroll]').forEach(function (nav) {
       nav.addEventListener('click', function () {
         var strip = byId('ig-strip');
