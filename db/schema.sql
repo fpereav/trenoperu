@@ -390,6 +390,24 @@ ORDER BY o.position;
 
 INSERT INTO data_migrations (name) VALUES ('vest_packs_all_options') ON CONFLICT (name) DO NOTHING;
 
+-- One-time: the ankle weight and kettlebell packs were priced below cost. New prices still save
+-- the shopper about 15 % against buying the items apart.
+UPDATE product_variants v SET price_cents = n.price, discount_cents = 0
+FROM (VALUES
+  ('PACKCH', '10 kg + tobilleras 1 kg', 10900), ('PACKCH', '15 kg + tobilleras 2 kg', 12900), ('PACKCH', '20 kg + tobilleras 2 kg', 14900),
+  ('PACKPE', '10 kg', 11900), ('PACKPE', '15 kg', 13900), ('PACKPE', '20 kg', 15900)
+) AS n (product_id, label, price)
+WHERE v.product_id = n.product_id AND v.label = n.label
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_pack_prices_up');
+
+UPDATE products SET price_cents = 10900, discount_cents = 0
+WHERE id = 'PACKCH' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_pack_prices_up');
+
+UPDATE products SET price_cents = 11900, discount_cents = 0
+WHERE id = 'PACKPE' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_pack_prices_up');
+
+INSERT INTO data_migrations (name) VALUES ('vest_pack_prices_up') ON CONFLICT (name) DO NOTHING;
+
 -- WhatsApp bot: recent customer chats (kept 7 days) and chats handed to a person.
 CREATE TABLE IF NOT EXISTS wa_messages (
   id         bigserial PRIMARY KEY,
