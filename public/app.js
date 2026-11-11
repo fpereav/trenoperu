@@ -899,9 +899,41 @@
       }
       setState({ loadError: false, loaded: true });
       syncDetailWithHash();
+      schedulePromo();
     }).catch(function () {
       if (!products.length) setState({ loadError: true });
     });
+  }
+
+  // Promo pop-up: a person training with the vest pack, shown once per visit a few
+  // seconds after the store loads. Clicking it opens the product.
+  var PROMO_PRODUCT = 'PACKCH';
+  var PROMO_KEY = 'treno-promo-seen';
+  var promoScheduled = false;
+
+  function schedulePromo() {
+    if (promoScheduled) return;
+    promoScheduled = true;
+    try { if (sessionStorage.getItem(PROMO_KEY)) return; } catch (e) { /* private mode */ }
+    var pack = products.find(function (p) { return p.id === PROMO_PRODUCT; });
+    var dialog = byId('popup');
+    if (!pack || !pack.inStock || !dialog) return;
+    byId('popup-price').textContent = 'S/ ' + Math.round(pack.price);
+    setTimeout(function () {
+      // Never cover something the visitor already opened.
+      if (document.querySelector('dialog[open]')) return;
+      try { sessionStorage.setItem(PROMO_KEY, '1'); } catch (e) { /* private mode */ }
+      dialog.showModal();
+    }, 2500);
+  }
+
+  function initPromo() {
+    var dialog = byId('popup');
+    if (!dialog) return;
+    byId('popup-close').addEventListener('click', function () { dialog.close(); });
+    // A click on the dimmed area outside the card closes it too.
+    dialog.addEventListener('click', function (event) { if (event.target === dialog) dialog.close(); });
+    byId('popup-link').addEventListener('click', function () { dialog.close(); });
   }
 
   function clearFilters() {
@@ -971,6 +1003,7 @@
     byId('cart-keep-shopping').addEventListener('click', function () { byId('cart').close(); });
     window.addEventListener('hashchange', syncDetailWithHash);
     renderTestReviews();
+    initPromo();
     document.querySelectorAll('[data-ig-scroll]').forEach(function (nav) {
       nav.addEventListener('click', function () {
         var strip = byId('ig-strip');
