@@ -98,6 +98,7 @@
   function showLogin(message) {
     byId('tabs').hidden = true;
     byId('stock-panel').hidden = true;
+    byId('claims-panel').hidden = true;
     byId('panel').hidden = true;
     byId('logout').hidden = true;
     byId('login').hidden = false;
@@ -114,12 +115,100 @@
   }
 
   function showTab(name) {
-    var stock = name === 'stock';
-    byId('panel').hidden = stock;
-    byId('stock-panel').hidden = !stock;
-    byId('tab-orders').setAttribute('aria-pressed', String(!stock));
-    byId('tab-stock').setAttribute('aria-pressed', String(stock));
-    return stock ? loadProducts() : loadOrders();
+    byId('panel').hidden = name !== 'orders';
+    byId('stock-panel').hidden = name !== 'stock';
+    byId('claims-panel').hidden = name !== 'claims';
+    byId('tab-orders').setAttribute('aria-pressed', String(name === 'orders'));
+    byId('tab-stock').setAttribute('aria-pressed', String(name === 'stock'));
+    byId('tab-claims').setAttribute('aria-pressed', String(name === 'claims'));
+    if (name === 'stock') return loadProducts();
+    if (name === 'claims') return loadClaims();
+    return loadOrders();
+  }
+
+  /* Libro de Reclamaciones */
+
+  // 15 business days (Monday to Friday) after the claim, as the law counts them.
+  function claimDeadline(createdAt) {
+    var day = new Date(createdAt);
+    var left = 15;
+    while (left > 0) {
+      day.setDate(day.getDate() + 1);
+      if (day.getDay() !== 0 && day.getDay() !== 6) left -= 1;
+    }
+    return day;
+  }
+
+  function claimCard(claim) {
+    var card = el('article', 'order order--' + (claim.status === 'respondido' ? 'entregado' : 'pendiente'));
+    var head = el('div');
+    var heading = el('div', 'order__heading');
+    heading.appendChild(el('span', 'order__id', claim.code));
+    heading.appendChild(el('span', 'order__muted', dateFormat.format(new Date(claim.createdAt))));
+    head.appendChild(heading);
+    head.appendChild(el('div', 'order__total', claim.kind === 'reclamo' ? 'Reclamo' : 'Queja'));
+    head.appendChild(el('div', 'order__muted', claim.status === 'respondido'
+      ? 'Respondido ' + dateFormat.format(new Date(claim.respondedAt))
+      : 'Responder antes del ' + dateFormat.format(claimDeadline(claim.createdAt))));
+    card.appendChild(head);
+
+    var who = el('div');
+    who.appendChild(el('div', 'order__label', 'Cliente'));
+    who.appendChild(el('div', '', claim.name + ' · ' + claim.document));
+    var contact = el('div', 'order__contact');
+    var mail = el('a', '', claim.email);
+    mail.href = 'mailto:' + claim.email + '?subject=' + encodeURIComponent('Respuesta a su ' + claim.kind + ' ' + claim.code + ' - TRENO PERU SAC');
+    contact.appendChild(mail);
+    var digits = claim.phone.replace(/[^0-9]/g, '');
+    var whatsapp = el('a', '', claim.phone);
+    whatsapp.href = 'https://wa.me/' + (digits.length === 9 ? '51' + digits : digits);
+    contact.appendChild(whatsapp);
+    who.appendChild(contact);
+    who.appendChild(el('div', 'order__address', claim.address));
+    if (claim.guardian) who.appendChild(el('div', 'order__note', 'Apoderado: ' + claim.guardian));
+    card.appendChild(who);
+
+    var body = el('div');
+    body.appendChild(el('div', 'order__label', (claim.itemType === 'producto' ? 'Producto' : 'Servicio') +
+      (claim.amount !== null ? ' · S/ ' + claim.amount.toFixed(2) : '') + (claim.orderRef ? ' · Pedido ' + claim.orderRef : '')));
+    body.appendChild(el('div', '', claim.item));
+    body.appendChild(el('div', 'order__label', 'Detalle'));
+    body.appendChild(el('div', 'order__note', claim.detail));
+    body.appendChild(el('div', 'order__label', 'Pide'));
+    body.appendChild(el('div', 'order__note', claim.request));
+    card.appendChild(body);
+
+    var reply = el('div');
+    reply.appendChild(el('div', 'order__label', 'Respuesta'));
+    var text = el('textarea', 'input');
+    text.rows = 4;
+    text.maxLength = 3000;
+    text.value = claim.response;
+    text.setAttribute('aria-label', 'Respuesta a ' + claim.code);
+    reply.appendChild(text);
+    reply.appendChild(button('btn btn--primary', claim.status === 'respondido' ? 'Actualizar respuesta' : 'Guardar respuesta', function () {
+      byId('claims-error').hidden = true;
+      api('/api/admin/reclamos/' + claim.id, jsonRequest('PATCH', { response: text.value })).then(loadClaims).catch(function (error) {
+        var box = byId('claims-error');
+        box.textContent = error.message;
+        box.hidden = false;
+      });
+    }));
+    card.appendChild(reply);
+    return card;
+  }
+
+  function loadClaims() {
+    return api('/api/admin/reclamos').then(function (list) {
+      showApp();
+      byId('claims-none').hidden = list.length > 0;
+      byId('claims-rows').replaceChildren.apply(byId('claims-rows'), list.map(claimCard));
+    }).catch(function (error) {
+      if (error.status === 401) return showLogin('');
+      var box = byId('claims-error');
+      box.textContent = error.message;
+      box.hidden = false;
+    });
   }
 
   /* Orders */
@@ -1109,6 +1198,7 @@
   });
   byId('tab-orders').addEventListener('click', function () { showTab('orders'); });
   byId('tab-stock').addEventListener('click', function () { showTab('stock'); });
+  byId('tab-claims').addEventListener('click', function () { showTab('claims'); });
 
   loadOrders().then(function () {
     if (byId('login').hidden) byId('panel').hidden = false;

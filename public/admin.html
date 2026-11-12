@@ -17,6 +17,7 @@
       <nav id="tabs" class="tabs" aria-label="Secciones" hidden>
         <button id="tab-orders" class="tab" type="button" aria-pressed="true">Pedidos</button>
         <button id="tab-stock" class="tab" type="button" aria-pressed="false">Productos</button>
+        <button id="tab-claims" class="tab" type="button" aria-pressed="false">Reclamos</button>
       </nav>
       <div class="topbar__end"><button id="logout" class="link" type="button" hidden>Cerrar sesión</button></div>
     </div>
@@ -42,6 +43,14 @@
       <p id="panel-error" class="notice" role="alert" hidden></p>
       <p id="none" class="empty" hidden>No hay pedidos con estos filtros.</p>
       <div id="rows" class="orders"></div>
+    </section>
+
+    <section id="claims-panel" hidden>
+      <h1 class="page-title">Libro de Reclamaciones</h1>
+      <p class="toolbar__count">Responde cada reclamo o queja en un máximo de 15 días hábiles, por el correo o teléfono del cliente, y registra aquí la respuesta.</p>
+      <p id="claims-error" class="notice" role="alert" hidden></p>
+      <p id="claims-none" class="empty" hidden>No hay reclamos registrados.</p>
+      <div id="claims-rows" class="orders"></div>
     </section>
 
     <section id="stock-panel" hidden>

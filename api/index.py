@@ -1241,12 +1241,144 @@ def sitemap():
         ids = [row[0] for row in conn.run(f"SELECT p.id FROM products p WHERE {ON_SALE_SQL} ORDER BY p.sort_order")]
     finally:
         conn.close()
+    pages = ("terminos", "envios", "cambios-y-devoluciones", "privacidad", "libro-de-reclamaciones")
     urls = [SITE_URL + "/"] + [f"{SITE_URL}/producto/{product_id}" for product_id in ids]
+    urls += [f"{SITE_URL}/{page}" for page in pages]
     entries = "".join(f"<url><loc>{html.escape(url)}</loc></url>" for url in urls)
     return (
         '<?xml version="1.0" encoding="UTF-8"?>'
         f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{entries}</urlset>'
     )
+
+
+COMPLAINT_FIELDS = {
+    "name": 120, "doc_number": 20, "address": 240, "phone": 20, "email": 120, "guardian": 120,
+    "item": 200, "order_ref": 40, "detail": 2000, "request": 1000,
+}
+COMPLAINT_REQUIRED = ("name", "doc_number", "address", "phone", "email", "item", "detail", "request")
+DOC_TYPES = ("DNI", "CE", "Pasaporte", "RUC")
+EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,120}\.[a-zA-Z]{2,}$")
+COMPLAINTS_PER_IP_PER_HOUR = 3
+
+
+def complaint_code(complaint_id, created_at):
+    return f"LR-{created_at.year}-{complaint_id:06d}"
+
+
+def clean_complaint(payload):
+    data = {}
+    for field, limit in COMPLAINT_FIELDS.items():
+        value = payload.get(field, "")
+        if not isinstance(value, str):
+            raise ApiError(400, "Revisa los datos del formulario.")
+        value = value.strip()
+        if len(value) > limit:
+            raise ApiError(400, "Alguno de los datos es demasiado largo.")
+        data[field] = value
+    if any(not data[field] for field in COMPLAINT_REQUIRED):
+        raise ApiError(400, "Completa todos los campos obligatorios.")
+    if payload.get("kind") not in ("reclamo", "queja"):
+        raise ApiError(400, "Elige si es un reclamo o una queja.")
+    if payload.get("item_type") not in ("producto", "servicio"):
+        raise ApiError(400, "Elige si se trata de un producto o un servicio.")
+    if payload.get("doc_type") not in DOC_TYPES:
+        raise ApiError(400, "Elige tu tipo de documento.")
+    if not re.fullmatch(r"[0-9A-Za-z-]{5,20}", data["doc_number"]):
+        raise ApiError(400, "Revisa tu número de documento.")
+    if not PHONE_RE.match(data["phone"]):
+        raise ApiError(400, "Revisa tu número de teléfono.")
+    if not EMAIL_RE.match(data["email"]):
+        raise ApiError(400, "Revisa tu correo electrónico.")
+    if payload.get("accept") is not True:
+        raise ApiError(400, "Confirma que tus datos son correctos.")
+    amount = payload.get("amount")
+    if amount in (None, ""):
+        data["amount_cents"] = None
+    else:
+        try:
+            cents = round(float(str(amount).replace(",", ".")) * 100)
+        except ValueError:
+            raise ApiError(400, "Revisa el monto reclamado.")
+        if not 0 <= cents <= MAX_PRICE_CENTS:
+            raise ApiError(400, "Revisa el monto reclamado.")
+        data["amount_cents"] = cents
+    data.update(kind=payload["kind"], item_type=payload["item_type"], doc_type=payload["doc_type"])
+    return data
+
+
+def create_complaint(payload, client_ip):
+    data = clean_complaint(payload)
+    ip_hash = hashlib.sha256((os.environ.get("ADMIN_SESSION_SECRET", "") + client_ip).encode()).hexdigest()
+    conn = connect()
+    try:
+        recent = conn.run(
+            "SELECT count(*) FROM complaints WHERE ip_hash = :ip AND created_at > now() - interval '1 hour'",
+            ip=ip_hash,
+        )[0][0]
+        if recent >= COMPLAINTS_PER_IP_PER_HOUR:
+            raise ApiError(429, "Recibimos varios reclamos seguidos. Escríbenos al 957 503 022.")
+        complaint_id, created_at = conn.run(
+            "INSERT INTO complaints (kind, name, doc_type, doc_number, address, phone, email, guardian, "
+            "item_type, item, amount_cents, order_ref, detail, request, ip_hash) VALUES (:kind, :name, "
+            ":doc_type, :doc_number, :address, :phone, :email, :guardian, :item_type, :item, :amount_cents, "
+            ":order_ref, :detail, :request, :ip) RETURNING id, created_at",
+            ip=ip_hash,
+            **data,
+        )[0]
+    finally:
+        conn.close()
+    return {"code": complaint_code(complaint_id, created_at), "createdAt": created_at.isoformat()}
+
+
+def admin_complaints():
+    conn = connect()
+    try:
+        found = rows(conn, "SELECT * FROM complaints ORDER BY created_at DESC LIMIT 500")
+    finally:
+        conn.close()
+    result = []
+    for c in found:
+        result.append({
+            "id": c["id"],
+            "code": complaint_code(c["id"], c["created_at"]),
+            "createdAt": c["created_at"].isoformat(),
+            "kind": c["kind"],
+            "name": c["name"],
+            "document": f"{c['doc_type']} {c['doc_number']}",
+            "address": c["address"],
+            "phone": c["phone"],
+            "email": c["email"],
+            "guardian": c["guardian"],
+            "itemType": c["item_type"],
+            "item": c["item"],
+            "amount": None if c["amount_cents"] is None else c["amount_cents"] / 100,
+            "orderRef": c["order_ref"],
+            "detail": c["detail"],
+            "request": c["request"],
+            "status": c["status"],
+            "response": c["response"],
+            "respondedAt": c["responded_at"].isoformat() if c["responded_at"] else None,
+        })
+    return result
+
+
+def answer_complaint(complaint_id, payload):
+    response = payload.get("response")
+    if not isinstance(response, str) or not response.strip() or len(response) > 3000:
+        raise ApiError(400, "Escribe la respuesta (hasta 3000 caracteres).")
+    conn = connect()
+    try:
+        updated = conn.run(
+            "UPDATE complaints SET status = 'respondido', response = :response, responded_at = now() "
+            "WHERE id = :id RETURNING id",
+            response=response.strip(),
+            id=complaint_id,
+        )
+    finally:
+        conn.close()
+    if not updated:
+        raise ApiError(404, "Reclamo no encontrado.")
+    return {"id": complaint_id, "status": "respondido"}
 
 
 META_COLUMNS = (
@@ -1482,6 +1614,8 @@ class handler(BaseHTTPRequestHandler):
         image = re.fullmatch(r"/api/images/(\d{1,18})", path)
         if method == "GET" and image:
             return self.send_image(read_product_photo(int(image.group(1))))
+        if method == "POST" and path == "/api/reclamos":
+            return self.send_json(201, create_complaint(self.read_json(), self.client_ip()))
         if method == "POST" and path == "/api/orders":
             return self.send_json(201, create_order(self.read_json(), self.client_ip()))
         if method == "POST" and path == "/api/admin/login":
@@ -1551,6 +1685,13 @@ class handler(BaseHTTPRequestHandler):
         if method == "DELETE" and stored:
             self.require_admin()
             return self.send_json(200, delete_product_photo(stored.group(1), int(stored.group(2))))
+        if method == "GET" and path == "/api/admin/reclamos":
+            self.require_admin()
+            return self.send_json(200, admin_complaints())
+        answer = re.fullmatch(r"/api/admin/reclamos/(\d{1,12})", path)
+        if method == "PATCH" and answer:
+            self.require_admin()
+            return self.send_json(200, answer_complaint(int(answer.group(1)), self.read_json()))
         match = re.fullmatch(r"/api/admin/orders/(\d{1,12})", path)
         if method == "PATCH" and match:
             self.require_admin()

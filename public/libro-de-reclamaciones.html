@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es-PE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Libro de Reclamaciones | TRENO Perú</title>
+<meta name="description" content="Libro de Reclamaciones virtual de TRENO PERU SAC (RUC 20606466154). Registra tu reclamo o queja.">
+<link rel="canonical" href="https://trenoperu.vercel.app/libro-de-reclamaciones">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="assets/img/favicon.png">
+<link rel="stylesheet" href="styles.css?v=3">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap site-header__row">
+      <a class="logo logo--badge" href="/"><img src="assets/img/logo-treno-blanco.png" alt="TRENO" width="404" height="144"></a>
+    </div>
+  </header>
+
+  <main class="legal">
+    <h1>Libro de Reclamaciones</h1>
+    <p>Conforme al Código de Protección y Defensa del Consumidor, esta empresa cuenta con un Libro de Reclamaciones a tu disposición.</p>
+
+    <div class="legal__company">
+      <div><strong>Razón social:</strong> TRENO PERU SAC</div>
+      <div><strong>RUC:</strong> 20606466154</div>
+      <div><strong>Dirección:</strong> San Borja, Lima, Perú</div>
+      <div><strong>Contacto:</strong> WhatsApp 957 503 022</div>
+    </div>
+
+    <form id="claim-form" class="claim" novalidate>
+      <fieldset>
+        <legend>1. Tus datos</legend>
+        <div class="claim__grid">
+          <label class="field field--wide">Nombres y apellidos *<input name="name" required maxlength="120" autocomplete="name"></label>
+          <label class="field">Tipo de documento *
+            <select name="doc_type" required>
+              <option value="DNI">DNI</option>
+              <option value="CE">Carné de extranjería</option>
+              <option value="Pasaporte">Pasaporte</option>
+              <option value="RUC">RUC</option>
+            </select>
+          </label>
+          <label class="field">Número de documento *<input name="doc_number" required maxlength="20" inputmode="text"></label>
+          <label class="field field--wide">Domicilio *<input name="address" required maxlength="240" autocomplete="street-address"></label>
+          <label class="field">Teléfono *<input name="phone" required maxlength="20" type="tel" autocomplete="tel"></label>
+          <label class="field">Correo electrónico *<input name="email" required maxlength="120" type="email" autocomplete="email"></label>
+          <label class="field field--wide">Padre, madre o apoderado (solo si eres menor de edad)<input name="guardian" maxlength="120"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>2. Producto o servicio</legend>
+        <div class="claim__choice" role="radiogroup" aria-label="Tipo de bien">
+          <label><input type="radio" name="item_type" value="producto" checked> Producto</label>
+          <label><input type="radio" name="item_type" value="servicio"> Servicio</label>
+        </div>
+        <div class="claim__grid" style="margin-top:14px">
+          <label class="field field--wide">Descripción del producto o servicio *<input name="item" required maxlength="200" placeholder="Ej.: Chaleco con peso 10 kg"></label>
+          <label class="field">Monto reclamado (S/)<input name="amount" maxlength="12" inputmode="decimal" placeholder="Ej.: 99.00"></label>
+          <label class="field">N.º de pedido (si lo tienes)<input name="order_ref" maxlength="40"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>3. Detalle</legend>
+        <div class="claim__choice" role="radiogroup" aria-label="Tipo de registro">
+          <label><input type="radio" name="kind" value="reclamo" checked> <span><strong>Reclamo:</strong> disconformidad con el producto o servicio.</span></label>
+          <label><input type="radio" name="kind" value="queja"> <span><strong>Queja:</strong> malestar por la atención recibida, no relacionado con el producto.</span></label>
+        </div>
+        <div class="claim__grid" style="margin-top:14px">
+          <label class="field field--wide">Detalle de lo ocurrido *<textarea name="detail" required maxlength="2000" rows="5"></textarea></label>
+          <label class="field field--wide">¿Qué solicitas? *<textarea name="request" required maxlength="1000" rows="3"></textarea></label>
+        </div>
+      </fieldset>
+
+      <label class="claim__accept"><input type="checkbox" name="accept" required> <span>Declaro que los datos consignados son verdaderos. Acepto que TRENO PERU SAC use estos datos para atender mi reclamo o queja, según su <a href="/privacidad">política de privacidad</a>.</span></label>
+
+      <p class="claim__hint">La formulación del reclamo no impide acudir a otras vías de solución de controversias ni es requisito previo para interponer una denuncia ante el Indecopi. Te responderemos en un plazo máximo de 15 días hábiles.</p>
+
+      <div id="claim-error" class="claim__error" role="alert" hidden></div>
+      <button id="claim-submit" class="button claim__submit" type="submit">Enviar reclamo</button>
+    </form>
+
+    <section id="claim-done" class="claim-sheet" hidden aria-live="polite">
+      <h2>Hoja de reclamación <span id="sheet-code"></span></h2>
+      <p>Registramos tu <span id="sheet-kind"></span>. Guarda esta hoja: te responderemos al correo y al teléfono que indicaste en un plazo máximo de 15 días hábiles.</p>
+      <dl id="sheet-list"></dl>
+      <div class="claim-sheet__actions">
+        <button id="sheet-print" class="button" type="button">Imprimir o guardar en PDF</button>
+        <a id="sheet-whatsapp" class="button button--outline" target="_blank" rel="noopener">Enviar copia por WhatsApp</a>
+      </div>
+    </section>
+
+    <p><a href="/">Volver a la tienda</a></p>
+  </main>
+  <script src="reclamos.js"></script>
+</body>
+</html>

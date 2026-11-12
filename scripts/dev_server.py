@@ -15,10 +15,10 @@ from index import handler  # noqa: E402
 class DevHandler(handler, SimpleHTTPRequestHandler):
     def do_GET(self):
         path = urlsplit(self.path).path
-        if path.startswith(("/api/", "/producto/")) or path == "/sitemap.xml":
+        if path.startswith(("/api/", "/producto/")) or path in ("/sitemap.xml", "/meta-catalogo.csv"):
             return handler.do_GET(self)
-        if path == "/admin":
-            self.path = "/admin.html"
+        if path in ("/admin", "/privacidad", "/terminos", "/envios", "/cambios-y-devoluciones", "/libro-de-reclamaciones"):
+            self.path = path + ".html"
         return SimpleHTTPRequestHandler.do_GET(self)
 
 

@@ -436,3 +436,30 @@ CREATE TABLE IF NOT EXISTS wa_handoffs (
   until  timestamptz NOT NULL,
   reason text NOT NULL DEFAULT ''
 );
+
+-- Libro de Reclamaciones virtual (Indecopi). Each claim keeps its correlative number and the answer.
+CREATE TABLE IF NOT EXISTS complaints (
+  id           bigserial PRIMARY KEY,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  kind         text NOT NULL CHECK (kind IN ('reclamo', 'queja')),
+  name         text NOT NULL,
+  doc_type     text NOT NULL,
+  doc_number   text NOT NULL,
+  address      text NOT NULL,
+  phone        text NOT NULL,
+  email        text NOT NULL,
+  guardian     text NOT NULL DEFAULT '',
+  item_type    text NOT NULL CHECK (item_type IN ('producto', 'servicio')),
+  item         text NOT NULL,
+  amount_cents integer CHECK (amount_cents >= 0),
+  order_ref    text NOT NULL DEFAULT '',
+  detail       text NOT NULL,
+  request      text NOT NULL,
+  status       text NOT NULL DEFAULT 'pendiente' CHECK (status IN ('pendiente', 'respondido')),
+  response     text NOT NULL DEFAULT '',
+  responded_at timestamptz,
+  ip_hash      text NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS complaints_created_at_idx ON complaints (created_at DESC);
+CREATE INDEX IF NOT EXISTS complaints_ip_hash_idx ON complaints (ip_hash, created_at);
