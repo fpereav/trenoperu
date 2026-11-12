@@ -962,7 +962,7 @@
     var pack = products.find(function (p) { return p.id === PROMO_PRODUCT; });
     var dialog = byId('popup');
     if (!pack || !pack.inStock || !dialog) return;
-    byId('popup-price').textContent = 'S/ ' + Math.round(pack.price);
+    byId('popup-price').textContent = 'S/\u00a0' + Math.round(pack.price);
     setTimeout(function () {
       // Never cover something the visitor already opened.
       if (document.querySelector('dialog[open]')) return;
