@@ -408,6 +408,16 @@ WHERE id = 'PACKPE' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = '
 
 INSERT INTO data_migrations (name) VALUES ('vest_pack_prices_up') ON CONFLICT (name) DO NOTHING;
 
+-- One-time: the owner put the 10 kg vest + 1 kg ankle weights pack back at S/ 69 (15 and 20 kg keep their prices).
+UPDATE product_variants SET price_cents = 6900, discount_cents = 0
+WHERE product_id = 'PACKCH' AND label = '10 kg + tobilleras 1 kg'
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_pack_10kg_back_to_69');
+
+UPDATE products SET price_cents = 6900, discount_cents = 0
+WHERE id = 'PACKCH' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'vest_pack_10kg_back_to_69');
+
+INSERT INTO data_migrations (name) VALUES ('vest_pack_10kg_back_to_69') ON CONFLICT (name) DO NOTHING;
+
 -- WhatsApp bot: recent customer chats (kept 7 days) and chats handed to a person.
 CREATE TABLE IF NOT EXISTS wa_messages (
   id         bigserial PRIMARY KEY,
