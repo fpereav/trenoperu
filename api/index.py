@@ -1249,6 +1249,64 @@ def sitemap():
     )
 
 
+META_COLUMNS = (
+    "id", "item_group_id", "title", "description", "availability", "condition", "price", "sale_price",
+    "link", "image_link", "brand", "size", "product_type",
+)
+
+
+def meta_money(cents):
+    return f"{cents / 100:.2f} PEN"
+
+
+def meta_catalog():
+    """Product feed for the Meta (Facebook/Instagram) catalog, one row per presentation."""
+    import csv
+
+    conn = connect()
+    try:
+        products = rows(
+            conn,
+            "SELECT p.id, p.name, p.description, p.category, p.price_cents, p.discount_cents, p.image, p.colors "
+            f"FROM products p WHERE {ON_SALE_SQL} ORDER BY p.sort_order",
+        )
+        photos = uploaded_photos(conn)
+        variants = variants_by_product(conn, only_in_stock=True)
+    finally:
+        conn.close()
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(META_COLUMNS)
+    for p in products:
+        slots = photos.get(p["id"], {})
+        image = next((SITE_URL + slots[s][0]["url"] for s in [MAIN_SLOT] + list(p["colors"]) if slots.get(s)), None)
+        if not image and p["image"] and p["image"] not in IMAGES_WITHOUT_FILE:
+            image = f"{SITE_URL}/assets/img/{p['image']}"
+        if not image:
+            continue  # Meta rejects items without a photo.
+        link = f"{SITE_URL}/producto/{p['id']}"
+        description = p["description"] or default_description(p["name"])
+        options = variants.get(p["id"]) or [dict(p, id=None, label="")]
+        for v in options:
+            title = f"{p['name']} {v['label']}".strip() if len(options) > 1 or v["label"] else p["name"]
+            writer.writerow((
+                f"{p['id']}-{v['id']}" if v["id"] else p["id"],
+                p["id"] if v["id"] else "",
+                title[:150],
+                description[:5000],
+                "in stock",
+                "new",
+                meta_money(v["price_cents"]),
+                meta_money(v["price_cents"] - v["discount_cents"]) if v["discount_cents"] else "",
+                link,
+                image,
+                "TRENO",
+                v["label"],
+                p["category"],
+            ))
+    return out.getvalue()
+
+
 def session_secret():
     secret = os.environ.get("ADMIN_SESSION_SECRET")
     if not secret or not os.environ.get("ADMIN_PASSWORD"):
@@ -1413,6 +1471,8 @@ class handler(BaseHTTPRequestHandler):
             return self.whatsapp(method)
         if method == "GET" and path == "/sitemap.xml":
             return self.send_text(200, "application/xml", sitemap())
+        if method == "GET" and path == "/meta-catalogo.csv":
+            return self.send_text(200, "text/csv", meta_catalog())
         page = re.fullmatch(r"/producto/([A-Z0-9]{1,20})", path)
         if method == "GET" and page:
             content = product_page(page.group(1))
