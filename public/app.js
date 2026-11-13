@@ -261,6 +261,7 @@
     tile.appendChild(favButton);
 
     if (!p.inStock) tile.appendChild(el('span', 'tile__badge tile__badge--out', 'Agotado'));
+    else if (bfPhase === 'on' && (p.cat === 'Packs' || (variant || p).discountPercent > 0)) tile.appendChild(el('span', 'tile__badge tile__badge--bf', 'Black Friday'));
     else if (variant ? variant.low : p.low) tile.appendChild(el('span', 'tile__badge tile__badge--low', 'Últimas unidades'));
     else if (p.top && !variant) tile.appendChild(el('span', 'tile__badge tile__badge--top', 'Más vendido'));
     return tile;
@@ -624,13 +625,63 @@
     }, { passive: false });
   }
 
-  // Black Friday seal on every banner, only from Fri 27 Nov to Mon 30 Nov 2026 (Lima time).
-  // ?prueba=blackfriday shows it any day to check the layout.
-  var BLACK_FRIDAY = { start: Date.parse('2026-11-27T00:00:00-05:00'), end: Date.parse('2026-12-01T00:00:00-05:00'), until: 'Hasta el lunes 30 nov' };
-  function showBlackFriday() {
+  // Black Friday, Fri 27 Nov to Mon 30 Nov 2026 (Lima time), like the big stores do it:
+  // a top bar with a countdown (a teaser the week before, then "termina en"), a seal on every
+  // banner and the popup, and a "Black Friday" tag on the packs and any discounted product.
+  // ?prueba=blackfriday previews the sale days; ?prueba=blackfriday-antes previews the teaser.
+  var BLACK_FRIDAY = {
+    teaser: Date.parse('2026-11-20T00:00:00-05:00'),
+    start: Date.parse('2026-11-27T00:00:00-05:00'),
+    end: Date.parse('2026-12-01T00:00:00-05:00'),
+    until: 'Hasta el lunes 30 nov'
+  };
+  function blackFridayPhase() {
+    var preview = (location.search.match(/[?&]prueba=(blackfriday(?:-antes)?)\b/) || [])[1];
+    if (preview) return preview === 'blackfriday' ? 'on' : 'soon';
     var now = Date.now();
-    var preview = /[?&]prueba=blackfriday\b/.test(location.search);
-    if (!preview && (now < BLACK_FRIDAY.start || now >= BLACK_FRIDAY.end)) return;
+    if (now >= BLACK_FRIDAY.start && now < BLACK_FRIDAY.end) return 'on';
+    if (now >= BLACK_FRIDAY.teaser && now < BLACK_FRIDAY.start) return 'soon';
+    return '';
+  }
+  var bfPhase = blackFridayPhase();
+
+  function blackFridayBar() {
+    var bar = el('a', 'bf-bar');
+    bar.href = '#promo';
+    bar.appendChild(el('span', 'bf-bar__tag', 'Black Friday'));
+    bar.appendChild(el('span', 'bf-bar__text', bfPhase === 'on' ? 'Packs con descuento' : 'Se viene el Black Friday TRENO'));
+    var label = el('span', 'bf-bar__label', bfPhase === 'on' ? 'Termina en' : 'Empieza en');
+    var clock = el('span', 'bf-bar__clock');
+    clock.setAttribute('role', 'timer');
+    bar.appendChild(label);
+    bar.appendChild(clock);
+    var preview = /[?&]prueba=/.test(location.search);
+    // In a preview the clock counts toward a fixed distance so it can be seen ticking.
+    var target = preview ? Date.now() + (bfPhase === 'on' ? 3 : 7) * 86400000 - 3723000 : (bfPhase === 'on' ? BLACK_FRIDAY.end : BLACK_FRIDAY.start);
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function unit(value, name) {
+      var box = el('span', 'bf-bar__unit');
+      box.appendChild(el('b', '', pad(value)));
+      box.appendChild(el('small', '', name));
+      return box;
+    }
+    function tick() {
+      var left = Math.max(0, Math.floor((target - Date.now()) / 1000));
+      if (!left && !preview) { location.reload(); return; }
+      fill(clock, [
+        unit(Math.floor(left / 86400), 'd'), unit(Math.floor(left / 3600) % 24, 'h'),
+        unit(Math.floor(left / 60) % 60, 'm'), unit(left % 60, 's')
+      ]);
+    }
+    tick();
+    setInterval(tick, 1000);
+    document.body.insertBefore(bar, document.body.firstChild);
+  }
+
+  function showBlackFriday() {
+    if (!bfPhase) return;
+    blackFridayBar();
+    if (bfPhase !== 'on') return;
     function seal(className) {
       var node = el('div', className);
       node.appendChild(el('span', 'bf-seal__black', 'Black'));

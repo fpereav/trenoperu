@@ -136,12 +136,14 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__dot::before { content: ''; position: absolute; inset: -16px; }
 @media (prefers-reduced-motion: reduce) { .hero__track { transition: none; } }
 .hero__banner img { display: block; width: 100%; height: auto; }
-/* The banner image draws these two buttons; these areas sit exactly over them. */
-.hero__action { position: absolute; display: block; padding: 0; border: 0; border-radius: 40px; background: transparent; color: transparent; font-size: 0; cursor: pointer; }
-.hero__action:hover { box-shadow: 0 0 0 2px #ffffff; }
+/* Real buttons over the empty bottom-left of the banner, sized with the banner width. */
+.hero__actions { position: absolute; left: 3.6%; top: 79.5%; display: flex; gap: 1.1cqw; }
+.hero__action { display: flex; align-items: center; justify-content: center; height: 4.4cqw; padding: 0 2.2cqw; border: max(1.5px, 0.12cqw) solid transparent; border-radius: 999px; font-family: Inter, sans-serif; font-size: 1.15cqw; font-weight: 800; letter-spacing: 0.05em; line-height: 1; text-decoration: none; text-transform: uppercase; white-space: nowrap; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.hero__action:hover { transform: translateY(-1px); box-shadow: 0 0.4cqw 1.2cqw rgba(0, 0, 0, 0.45); }
 .hero__action:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
-.hero__action--cart { left: 3.6%; top: 79.5%; width: 20.3%; height: 11%; }
-.hero__action--whatsapp { left: 24.8%; top: 79.8%; width: 24%; height: 10.4%; }
+.hero__action--cart { background: var(--accent); color: #111111; }
+.hero__action--cart:disabled { background: #3a3a40; color: #A0A0A8; cursor: default; transform: none; }
+.hero__action--whatsapp { border-color: #ffffff; background: rgba(0, 0, 0, 0.35); color: #ffffff; }
 /* Black Friday seal (app.js adds it only during Black Friday). Sized by the banner width so it
    keeps its place in the empty top-right corner of the image on every screen. */
 .hero__banner { container-type: inline-size; }
@@ -235,6 +237,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tile__badge--top { background: var(--yellow); }
 .tile__badge--low { background: var(--accent); }
 .tile__badge--out { background: var(--line); }
+.tile__badge--bf { background: #000000; color: #ffffff; box-shadow: inset 0 -2px 0 var(--accent); text-transform: uppercase; letter-spacing: 0.04em; }
+/* Black Friday top bar (app.js adds it from a week before until the sale ends). */
+.bf-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; padding: 8px var(--page-pad, 16px); background: #000000; color: #ffffff; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; border-bottom: 3px solid var(--accent); }
+.bf-bar:hover .bf-bar__text { text-decoration: underline; }
+.bf-bar__tag { padding: 2px 10px; border-radius: 4px; background: var(--accent); color: #111111; font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-style: italic; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
+.bf-bar__label { color: #A0A0A8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+.bf-bar__clock { display: flex; gap: 4px; }
+.bf-bar__unit { display: inline-flex; align-items: baseline; gap: 1px; min-width: 38px; justify-content: center; padding: 3px 5px; border-radius: 4px; background: #1E1E22; }
+.bf-bar__unit b { font-variant-numeric: tabular-nums; font-size: 15px; }
+.bf-bar__unit small { color: var(--accent); font-size: 11px; font-weight: 700; }
+@media (max-width: 560px) { .bf-bar { gap: 4px 8px; font-size: 12px; } .bf-bar__text { display: none; } .bf-bar__tag { font-size: 16px; } }
 .card__name a { text-decoration: none; }
 .card__name a:hover { text-decoration: underline; }
 .card__name { display: -webkit-box; min-height: 2.7em; margin: 14px 4px 4px; overflow: hidden; font-size: 16px; font-weight: 600; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
@@ -427,12 +440,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
 @media (max-width: 900px) {
   .benefits { display: none; }
   /* Too small to tap on the image: show real buttons under the banner. */
-  .hero__actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px var(--page-pad) 4px; }
-  .hero__action { position: static; display: flex; align-items: center; justify-content: center; width: auto; height: auto; min-height: 40px; padding: 6px 8px; border-radius: 999px; color: #111111; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; line-height: 1.2; text-align: center; text-decoration: none; text-transform: uppercase; }
-  .hero__action:hover { box-shadow: none; }
+  .hero__actions { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px var(--page-pad) 4px; }
+  .hero__action { position: static; display: flex; align-items: center; justify-content: center; width: auto; height: auto; min-height: 40px; padding: 6px 8px; border-radius: 999px; font-size: 11px; white-space: normal; font-weight: 700; letter-spacing: 0.04em; line-height: 1.2; text-align: center; text-decoration: none; text-transform: uppercase; }
+  .hero__action:hover { box-shadow: none; transform: none; }
   .hero__action--cart { background: var(--accent); }
   .hero__action--cart:disabled { background: var(--line); color: var(--muted); }
-  .hero__action--whatsapp { border: 1px solid #ffffff; color: #ffffff; }
+  .hero__action--whatsapp { border: 1px solid #ffffff; background: transparent; color: #ffffff; }
   .hero__dots { position: static; justify-content: center; padding: 6px 0 10px; transform: none; }
   .hero__dot { width: 9px; height: 9px; border-width: 1.5px; }
   .filters__panel { grid-template-columns: minmax(0, 1fr); }
