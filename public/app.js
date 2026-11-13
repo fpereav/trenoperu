@@ -624,6 +624,30 @@
     }, { passive: false });
   }
 
+  // Black Friday seal on every banner, only from Fri 27 Nov to Mon 30 Nov 2026 (Lima time).
+  // ?prueba=blackfriday shows it any day to check the layout.
+  var BLACK_FRIDAY = { start: Date.parse('2026-11-27T00:00:00-05:00'), end: Date.parse('2026-12-01T00:00:00-05:00'), until: 'Hasta el lunes 30 nov' };
+  function showBlackFriday() {
+    var now = Date.now();
+    var preview = /[?&]prueba=blackfriday\b/.test(location.search);
+    if (!preview && (now < BLACK_FRIDAY.start || now >= BLACK_FRIDAY.end)) return;
+    function seal(className) {
+      var node = el('div', className);
+      node.appendChild(el('span', 'bf-seal__black', 'Black'));
+      node.appendChild(el('span', 'bf-seal__friday', 'Friday'));
+      node.appendChild(el('span', 'bf-seal__until', BLACK_FRIDAY.until));
+      return node;
+    }
+    document.querySelectorAll('.hero__banner').forEach(function (banner) {
+      banner.appendChild(seal('bf-seal'));
+      var img = banner.querySelector('img');
+      img.alt = 'Black Friday. ' + img.alt;
+    });
+    var popupLink = byId('popup-link');
+    popupLink.appendChild(seal('bf-seal bf-seal--popup'));
+    popupLink.querySelector('img').alt = 'Black Friday. ' + popupLink.querySelector('img').alt;
+  }
+
   var heroKey = '';
   function renderHero() {
     var available = 0;
@@ -1028,6 +1052,7 @@
     hero.addEventListener('focusin', function (event) { heroPaused = event.target.matches(':focus-visible'); });
     hero.addEventListener('focusout', function () { heroPaused = false; });
     bindHeroSwipe();
+    showBlackFriday();
     setInterval(function () {
       var slides = heroSlides();
       if (heroPaused || document.hidden || slides.length < 2 || hero.hidden) return;

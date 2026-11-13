@@ -142,6 +142,17 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .hero__action:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
 .hero__action--cart { left: 3.6%; top: 79.5%; width: 20.3%; height: 11%; }
 .hero__action--whatsapp { left: 24.8%; top: 79.8%; width: 24%; height: 10.4%; }
+/* Black Friday seal (app.js adds it only during Black Friday). Sized by the banner width so it
+   keeps its place in the empty top-right corner of the image on every screen. */
+.hero__banner { container-type: inline-size; }
+.bf-seal { position: absolute; top: 1.4cqw; right: 2.4cqw; display: grid; grid-template-columns: auto auto; column-gap: 0.9cqw; justify-items: center; padding: 0.7cqw 1.6cqw 0.8cqw; border: max(2px, 0.22cqw) solid var(--accent); border-radius: 0.7cqw; background: #000000; color: #ffffff; font-family: 'Barlow Condensed', sans-serif; font-style: italic; font-weight: 800; line-height: 0.95; text-transform: uppercase; transform: rotate(-3deg); box-shadow: 0 0.5cqw 1.4cqw rgba(0, 0, 0, 0.45); pointer-events: none; }
+.bf-seal__black, .bf-seal__friday { font-size: 3.5cqw; letter-spacing: 0.02em; }
+.bf-seal__friday { color: var(--accent); }
+.bf-seal__until { grid-column: 1 / -1; margin-top: 0.35cqw; font-family: Inter, sans-serif; font-style: normal; font-size: 1.1cqw; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap; }
+.popup__link { container-type: inline-size; }
+.bf-seal--popup { top: 3.5cqw; right: auto; left: 3.5cqw; padding: 1.4cqw 3cqw 1.6cqw; border-width: max(2px, 0.5cqw); border-radius: 1.6cqw; }
+.bf-seal--popup .bf-seal__black, .bf-seal--popup .bf-seal__friday { font-size: 8.5cqw; }
+.bf-seal--popup .bf-seal__until { margin-top: 0.8cqw; font-size: max(10px, 2.6cqw); }
 
 /* Benefits */
 .benefits { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 24px; margin-block: 0; padding-block: 20px; border-bottom: 1px solid var(--line); list-style: none; font-size: 14px; font-weight: 600; text-align: center; }
