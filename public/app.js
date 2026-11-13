@@ -626,11 +626,11 @@
   }
 
   // Black Friday, Fri 27 Nov to Mon 30 Nov 2026 (Lima time), like the big stores do it:
-  // a top bar with a countdown (a teaser the week before, then "termina en"), a seal on every
+  // a top bar with a countdown (a teaser from Nov 13, then "termina en"), a seal on every
   // banner and the popup, and a "Black Friday" tag on the packs and any discounted product.
   // ?prueba=blackfriday previews the sale days; ?prueba=blackfriday-antes previews the teaser.
   var BLACK_FRIDAY = {
-    teaser: Date.parse('2026-11-20T00:00:00-05:00'),
+    teaser: Date.parse('2026-11-13T00:00:00-05:00'),
     start: Date.parse('2026-11-27T00:00:00-05:00'),
     end: Date.parse('2026-12-01T00:00:00-05:00'),
     until: 'Hasta el lunes 30 nov'
@@ -678,9 +678,40 @@
     document.body.insertBefore(bar, document.body.firstChild);
   }
 
+  // Big "Ofertas Black Friday desde nov 27" block under the banners, with two packs and a link to them.
+  function blackFridayPromo() {
+    var box = el('section', 'bf-promo wrap');
+    box.setAttribute('aria-label', 'Black Friday');
+    var text = el('div', 'bf-promo__text');
+    var title = el('h2', 'bf-promo__title');
+    title.appendChild(el('span', '', 'Ofertas Black Friday'));
+    title.appendChild(el('span', '', bfPhase === 'on' ? 'hasta nov 30' : 'desde nov 27'));
+    text.appendChild(title);
+    text.appendChild(el('p', 'bf-promo__sub', bfPhase === 'on' ? 'Packs de chaleco lastrado desde S/ 69. Solo hasta el lunes 30.' : 'Packs de chaleco lastrado desde S/ 69. Del viernes 27 al lunes 30.'));
+    var link = el('a', 'bf-promo__cta', 'Ver packs');
+    link.href = '#catalogo';
+    link.dataset.catLink = 'Packs';
+    text.appendChild(link);
+    box.appendChild(text);
+    var pics = el('div', 'bf-promo__pics');
+    ['pack-chaleco-tobilleras-rosado.jpg', 'pack-chaleco-tobilleras.jpg'].forEach(function (name) {
+      var img = document.createElement('img');
+      img.src = 'assets/img/' + name;
+      img.alt = '';
+      img.width = 300;
+      img.height = 300;
+      img.loading = 'lazy';
+      pics.appendChild(img);
+    });
+    box.appendChild(pics);
+    var groups = byId('groups');
+    groups.parentNode.insertBefore(box, groups);
+  }
+
   function showBlackFriday() {
     if (!bfPhase) return;
     blackFridayBar();
+    blackFridayPromo();
     if (bfPhase !== 'on') return;
     function seal(className) {
       var node = el('div', className);

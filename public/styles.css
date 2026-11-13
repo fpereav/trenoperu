@@ -247,6 +247,16 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .bf-bar__unit { display: inline-flex; align-items: baseline; gap: 1px; min-width: 38px; justify-content: center; padding: 3px 5px; border-radius: 4px; background: #1E1E22; }
 .bf-bar__unit b { font-variant-numeric: tabular-nums; font-size: 15px; }
 .bf-bar__unit small { color: var(--accent); font-size: 11px; font-weight: 700; }
+/* Black Friday block under the banners, in the style of the big stores' sale announcements. */
+.bf-promo { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 28px; padding: 32px 40px; overflow: hidden; border-radius: 16px; background: linear-gradient(120deg, #FF4670, #ff6a3d); color: #ffffff; }
+.bf-promo__title { display: flex; flex-direction: column; margin: 0; font-family: Inter, sans-serif; font-size: clamp(30px, 4.2vw, 52px); font-weight: 800; line-height: 1.05; letter-spacing: -0.01em; }
+.bf-promo__sub { margin: 12px 0 18px; font-size: 16px; font-weight: 500; opacity: 0.95; }
+.bf-promo__cta { display: inline-block; padding: 12px 26px; border-radius: 999px; background: #111111; color: #ffffff; font-weight: 800; letter-spacing: 0.04em; text-decoration: none; text-transform: uppercase; transition: transform 0.15s; }
+.bf-promo__cta:hover { transform: translateY(-1px); }
+.bf-promo__pics { display: flex; flex: none; gap: 14px; }
+.bf-promo__pics img { width: 170px; height: 170px; object-fit: cover; border: 5px solid #ffffff; border-radius: 10px; background: #ffffff; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25); transform: rotate(4deg); }
+.bf-promo__pics img:first-child { transform: rotate(-5deg) translateY(10px); }
+@media (max-width: 760px) { .bf-promo { flex-direction: column; align-items: flex-start; margin-top: 16px; padding: 24px 20px; } .bf-promo__pics { align-self: center; } .bf-promo__pics img { width: 130px; height: 130px; } }
 @media (max-width: 560px) { .bf-bar { gap: 4px 8px; font-size: 12px; } .bf-bar__text { display: none; } .bf-bar__tag { font-size: 16px; } }
 .card__name a { text-decoration: none; }
 .card__name a:hover { text-decoration: underline; }
