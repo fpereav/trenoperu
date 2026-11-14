@@ -23,6 +23,7 @@ window.TRENO_COLOR_IMAGES = {
   PACKCH: { negro: 'pack-chaleco-tobilleras.jpg', rosado: 'pack-chaleco-tobilleras-rosado.jpg', verde: 'pack-chaleco-tobilleras-verde.jpg', plomo: 'pack-chaleco-tobilleras-plomo.jpg' },
   PACKPE: { negro: 'pack-chaleco-pesa.jpg', rosado: 'pack-chaleco-pesa-rosado.jpg', verde: 'pack-chaleco-pesa-verde.jpg', plomo: 'pack-chaleco-pesa-plomo.jpg' },
   PACKBA: { negro: 'pack-chaleco-bandas.jpg', rosado: 'pack-chaleco-bandas-rosado.jpg', verde: 'pack-chaleco-bandas-verde.jpg', plomo: 'pack-chaleco-bandas-plomo.jpg' },
+  PACKGL: { rosado: 'pack-piernas-gluteos.jpg' },
   CHASIN: { negro: 'chaleco-peso-negro.jpg', rosado: 'chaleco-peso.jpg', verde: 'chaleco-peso-verde.jpg', plomo: 'chaleco-peso-plomo.jpg' },
   SOGPVC: { celeste: 'soga-pvc.jpg', naranja: 'soga-pvc-naranja.jpg' },
   STEPVC: { azul: 'step-pvc.jpg', plomo: 'step-pvc-plomo.jpg' },

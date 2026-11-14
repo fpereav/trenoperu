@@ -418,6 +418,28 @@ WHERE id = 'PACKCH' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = '
 
 INSERT INTO data_migrations (name) VALUES ('vest_pack_10kg_back_to_69') ON CONFLICT (name) DO NOTHING;
 
+-- One-time: new legs and glutes pack (ankle weights + 5 bands + EVA mat), right after the vest packs.
+UPDATE products SET sort_order = sort_order + 1
+WHERE sort_order > (SELECT sort_order FROM products WHERE id = 'PACKBA')
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pack_piernas_gluteos');
+
+INSERT INTO products (id, name, description, category, price_cents, image, colors, stock, top, sort_order)
+SELECT 'PACKGL', 'Pack piernas y glúteos',
+  'Pack con un par de tobilleras con peso, set de 5 bandas de látex (rosa y lila, 5 intensidades) y mat de goma EVA de 8 mm. Elige tobilleras de 1 kg o 2 kg. Todo para entrenar piernas y glúteos en casa.',
+  'Packs', 7900, 'pack-piernas-gluteos.jpg', '["rosado"]'::jsonb, 0, false,
+  (SELECT sort_order + 1 FROM products WHERE id = 'PACKBA')
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pack_piernas_gluteos')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO product_variants (product_id, label, price_cents, discount_cents, stock)
+SELECT 'PACKGL', o.label, o.price, 0, o.stock
+FROM (VALUES (1, 'Tobilleras 1 kg', 7900, 5), (2, 'Tobilleras 2 kg', 8900, 5)) AS o (position, label, price, stock)
+WHERE NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pack_piernas_gluteos')
+  AND NOT EXISTS (SELECT 1 FROM product_variants v WHERE v.product_id = 'PACKGL')
+ORDER BY o.position;
+
+INSERT INTO data_migrations (name) VALUES ('pack_piernas_gluteos') ON CONFLICT (name) DO NOTHING;
+
 -- WhatsApp bot: recent customer chats (kept 7 days) and chats handed to a person.
 CREATE TABLE IF NOT EXISTS wa_messages (
   id         bigserial PRIMARY KEY,
