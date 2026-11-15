@@ -440,6 +440,17 @@ ORDER BY o.position;
 
 INSERT INTO data_migrations (name) VALUES ('pack_piernas_gluteos') ON CONFLICT (name) DO NOTHING;
 
+-- One-time: the owner found S/ 79 too cheap with the mat included. 1 kg pack S/ 99, 2 kg pack S/ 109.
+UPDATE product_variants v SET price_cents = n.price, discount_cents = 0
+FROM (VALUES ('Tobilleras 1 kg', 9900), ('Tobilleras 2 kg', 10900)) AS n (label, price)
+WHERE v.product_id = 'PACKGL' AND v.label = n.label
+  AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pack_gluteos_99');
+
+UPDATE products SET price_cents = 9900, discount_cents = 0
+WHERE id = 'PACKGL' AND NOT EXISTS (SELECT 1 FROM data_migrations WHERE name = 'pack_gluteos_99');
+
+INSERT INTO data_migrations (name) VALUES ('pack_gluteos_99') ON CONFLICT (name) DO NOTHING;
+
 -- WhatsApp bot: recent customer chats (kept 7 days) and chats handed to a person.
 CREATE TABLE IF NOT EXISTS wa_messages (
   id         bigserial PRIMARY KEY,
