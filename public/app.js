@@ -1055,9 +1055,9 @@
     });
   }
 
-  // Promo pop-up: a person training with the vest pack, shown once per visit a few
+  // Promo pop-up: a person training with a pack (changed every 3 days), shown once per visit a few
   // seconds after the store loads. Clicking it opens the product.
-  var PROMO_PRODUCT = 'PACKCH';
+  var PROMO_PRODUCT = 'PACKGL';
   var PROMO_KEY = 'treno-promo-seen';
   var promoScheduled = false;
 
